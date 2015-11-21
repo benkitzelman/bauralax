@@ -56,20 +56,44 @@
 
   Q.Sprite.extend("Planet", {
     init: function(p) {
-      var asset, assets, scale;
-      assets = [0, 1].map(function(i) {
-        return "/assets/images/planet" + i + ".png";
-      });
-      asset = assets[Math.floor(Math.random() * 10) % assets.length];
+      var scale;
       scale = Math.ceil(Math.random() * 10) / 10;
       this._super(Q._extend({
-        asset: asset,
+        asset: this.randomAsset(),
         scale: scale,
         type: Q.SPRITE_NONE
       }, p));
-      console.log('HERE');
       this.add('2d');
       return this.on("hit.sprite", this.onCollision);
+    },
+    randomAsset: function() {
+      var assets;
+      assets = [0, 1].map(function(i) {
+        return "/assets/images/planet" + i + ".png";
+      });
+      return assets[Math.floor(Math.random() * 10) % assets.length];
+    },
+    teamColor: function() {
+      switch (this.p.team) {
+        case "RED":
+          return "rgba(255,0,0,0.25)";
+        case "GREEN":
+          return "rgba(0,255,0,0.25)";
+        case "BLUE":
+          return "rgba(0,0,255,0.25)";
+        default:
+          return "rgba(45,45,45,0.5)";
+      }
+    },
+    draw: function(ctx) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(this.asset(), 0, 0, this.asset().width, this.asset().height);
+      ctx.beginPath();
+      ctx.fillStyle = this.teamColor();
+      ctx.arc(this.asset().width / 2, this.asset().height / 2, this.asset().width / 2, 0, 180);
+      ctx.fill();
+      return ctx.restore();
     },
     onCollision: (function(_this) {
       return function(collision) {
@@ -120,13 +144,16 @@
     planets = [
       planetOne = new Q.Planet({
         x: 300,
-        y: 100
+        y: 100,
+        team: 'RED'
       }), planetTwo = new Q.Planet({
         x: 700,
-        y: 500
+        y: 500,
+        team: 'GREEN'
       }), planetThree = new Q.Planet({
         x: 1200,
-        y: 300
+        y: 300,
+        team: 'BLUE'
       })
     ];
     for (j = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? j <= ref : j >= ref; 1 <= ref ? j++ : j--) {
