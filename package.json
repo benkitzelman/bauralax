@@ -1,0 +1,18 @@
+{
+  "name": "bauralux",
+  "version": "1.0.0",
+  "description": "like auralux with a bee",
+  "main": "index.coffee",
+  "scripts": {
+    "server": "http-server . -p 3001 &",
+    "compile" : "cat ./src/*.coffee ./src/models/*.coffee ./src/scenes/*.coffee | coffee --compile --stdio > bauralux.js",
+    "start": "npm run compile && npm run server && open http://localhost:3001/index.html",
+    "test": "mocha test/"
+  },
+  "author": "@benkitzelman",
+  "license": "ISC",
+  "dependencies": {
+    "quintus": "^0.2.0",
+    "http-server": "~ 0.5.5"
+  }
+}
