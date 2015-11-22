@@ -34,10 +34,8 @@ Q.Sprite.extend "Ship",
   targetCoords: ->
     if @p.target?
       _.pick @p.target.p, 'x', 'y', 'vx', 'vy'
-
-    if @p.targetXY
-      x: @p.targetXY[0]
-      y: @p.targetXY[1]
+    else
+      @p.targetXY
 
   stop: ->
     @p.vx = @p.vy = 0

@@ -136,24 +136,43 @@
 
   Q.component('shipBuilder', {
     added: function() {
-      return this.timer = setInterval(this.build.bind(this), this.entity.p.buildRate || 1000);
+      this.timer = setInterval(this.build.bind(this), this.entity.p.buildRate || 1000);
+      return this._emitToCoordIndex = 0;
     },
     stopBuilding: function() {
       return clearInterval(this.timer);
     },
+    nextCoords: function() {
+      var coords, dist, ref, x, y;
+      dist = 50;
+      ref = this.entity.p, x = ref.x, y = ref.y;
+      coords = [
+        {
+          x: x + dist,
+          y: y + dist
+        }, {
+          x: x - dist,
+          y: y + dist
+        }, {
+          x: x + dist,
+          y: y - dist
+        }, {
+          x: x - dist,
+          y: y - dist
+        }
+      ];
+      return coords[this._emitToCoordIndex++ % coords.length];
+    },
     build: function() {
       var coords, ref, team, x, y;
       ref = this.entity.p, team = ref.team, x = ref.x, y = ref.y;
-      coords = {
-        x: x,
-        y: y + 100
-      };
+      coords = this.nextCoords();
       this.entity.stage.insert(new Q.Marker(coords));
       return this.entity.stage.insert(new Q.Ship({
         x: x,
         y: y,
         team: team,
-        targetXY: [coords.x, coords.y]
+        targetXY: coords
       }));
     }
   });
@@ -254,13 +273,9 @@
     },
     targetCoords: function() {
       if (this.p.target != null) {
-        _.pick(this.p.target.p, 'x', 'y', 'vx', 'vy');
-      }
-      if (this.p.targetXY) {
-        return {
-          x: this.p.targetXY[0],
-          y: this.p.targetXY[1]
-        };
+        return _.pick(this.p.target.p, 'x', 'y', 'vx', 'vy');
+      } else {
+        return this.p.targetXY;
       }
     },
     stop: function() {
