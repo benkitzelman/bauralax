@@ -5,7 +5,7 @@
   "main": "index.coffee",
   "scripts": {
     "server": "http-server . -p 3001 &",
-    "compile" : "cat ./src/*.coffee ./src/models/*.coffee ./src/scenes/*.coffee | coffee --compile --stdio > bauralux.js",
+    "compile" : "cat ./src/models/*.coffee ./src/*.coffee ./src/components/*.coffee ./src/sprites/*.coffee ./src/scenes/*.coffee | coffee --compile --stdio > bauralux.js",
     "start": "npm run compile && npm run server && open http://localhost:3001/index.html",
     "test": "mocha test/"
   },

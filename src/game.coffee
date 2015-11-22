@@ -1,5 +1,5 @@
 window.Q = Quintus(development: true)
-  .include("Sprites, Scenes, Input, 2D, Touch, UI")
+  .include("Sprites, Math, Scenes, Input, 2D, Touch, UI")
   .setup(maximize: true, scaleToFit: true)     # Add a canvas element onto the page
   .controls()  # Add in default controls (keyboard, buttons)
   .touch()     # Add in touch support (for the UI)
@@ -36,7 +36,6 @@ class Game
     assetList = Game.assets.map( (fileName) -> "/assets/images/#{fileName}" ).join(', ')
     @Q.load assetList, =>
       # Finally, call stageScene to run the game
-      console.log 'OK'
       @Q.stageScene "level1"
       Game.started.resolveWith this
 

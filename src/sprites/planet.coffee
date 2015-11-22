@@ -1,14 +1,17 @@
 Q.Sprite.extend "Planet",
   init: (p) ->
-    scale  = (Math.ceil(Math.random() * 10) / 10)
-
+    scale  = _.max [0.4, (Math.ceil(Math.random() * 10) / 10)]
+    console.log 'SCALE', scale
     @_super Q._extend
-      asset : @randomAsset()
-      scale : scale
-      type  : Q.SPRITE_NONE
+      asset     : @randomAsset()
+      scale     : scale
+      team      : Team.NONE
+      type      : Q.SPRITE_NONE
+      buildRate : 500
     , p
 
     @add '2d'
+    @add 'shipBuilder'
 
     # Write event handlers to respond hook into behaviors.
     # hit.sprite is called everytime the player collides with a sprite
@@ -18,21 +21,14 @@ Q.Sprite.extend "Planet",
     assets = [0..1].map (i) -> "/assets/images/planet#{i}.png"
     assets[ Math.floor(Math.random() * 10) % (assets.length) ]
 
-  teamColor: ->
-    switch @p.team
-      when "RED"   then "rgba(255,0,0,0.25)"
-      when "GREEN" then "rgba(0,255,0,0.25)"
-      when "BLUE"  then "rgba(0,0,255,0.25)"
-      else "rgba(45,45,45,0.5)"
-
   draw: (ctx) ->
+    @_super(ctx)
+
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
-    ctx.drawImage @asset(), 0, 0, @asset().width, @asset().height
-
     ctx.beginPath()
-    ctx.fillStyle = @teamColor()
-    ctx.arc(@asset().width / 2, @asset().height / 2, @asset().width / 2, 0, 180)
+    ctx.fillStyle = @p.team.color(0.25)
+    ctx.arc(0, 0, @asset().width / 2, 0, 180)
     ctx.fill()
     ctx.restore()
 
