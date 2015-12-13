@@ -1,9 +1,3 @@
-window.Q = Quintus(development: true)
-  .include("Sprites, Math, Scenes, Input, 2D, Touch, UI")
-  .setup(maximize: true, scaleToFit: true)     # Add a canvas element onto the page
-  .controls()  # Add in default controls (keyboard, buttons)
-  .touch()     # Add in touch support (for the UI)
-
 class Game
   @assets = [
     # "sprites.json"
@@ -38,5 +32,3 @@ class Game
       # Finally, call stageScene to run the game
       @Q.stageScene "level1"
       Game.started.resolveWith this
-
-$(document).ready -> Game.start()

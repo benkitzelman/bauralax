@@ -4,15 +4,22 @@
   "description": "like auralux with a bee",
   "main": "index.coffee",
   "scripts": {
-    "server": "http-server . -p 3001 &",
-    "compile" : "cat ./src/models/*.coffee ./src/*.coffee ./src/components/*.coffee ./src/sprites/*.coffee ./src/scenes/*.coffee | coffee --compile --stdio > bauralux.js",
-    "start": "npm run compile && npm run server && open http://localhost:3001/index.html",
-    "test": "mocha test/"
+    "server": "grunt http-server",
+    "start": "grunt start"
   },
   "author": "@benkitzelman",
   "license": "ISC",
   "dependencies": {
-    "quintus": "^0.2.0",
-    "http-server": "~ 0.5.5"
+    "coffee-script": "^1.10.0",
+    "grunt": "^0.4.5",
+    "grunt-cli": "^0.1.13",
+    "grunt-contrib-clean": "^0.7.0",
+    "grunt-contrib-coffee": "^0.13.0",
+    "grunt-contrib-concat": "^0.5.1",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-http-server": "^1.13.0",
+    "http-server": "~ 0.5.5",
+    "lodash": "^3.10.1",
+    "quintus": "^0.2.0"
   }
 }
