@@ -25,13 +25,16 @@
       return Q.radiansToDegrees(radians) - 90;
     };
     Q.distance = function(fromX, fromY, toX, toY) {
+      var adjacent, opposite;
       if (toX == null) {
         toX = 0;
       }
       if (toY == null) {
         toY = 0;
       }
-      return Math.sqrt(Math.pow(fromX - toX, 2) + Math.pow(fromY - toY, 2));
+      opposite = fromX - toX;
+      adjacent = fromY - toY;
+      return Math.sqrt(Math.pow(opposite, 2) + Math.pow(adjacent, 2));
     };
     Q.offsetX = function(angle, radius) {
       return Math.sin(angle / 180 * Math.PI) * radius;
@@ -149,31 +152,53 @@
       coords = [
         {
           x: x + dist,
-          y: y + dist
-        }, {
-          x: x - dist,
-          y: y + dist
+          y: y + dist,
+          team: Team.RED
         }, {
           x: x + dist,
-          y: y - dist
+          y: y + dist,
+          team: Team.BLUE
         }, {
           x: x - dist,
-          y: y - dist
+          y: y + dist,
+          team: Team.BLUE
+        }, {
+          x: x + dist,
+          y: y - dist,
+          team: Team.GREEN
+        }, {
+          x: x - dist,
+          y: y - dist,
+          team: Team.NONE
         }
       ];
       return coords[this._emitToCoordIndex++ % coords.length];
     },
     build: function() {
-      var coords, ref, team, x, y;
+      var coords, ref, ship, team, x, y;
       ref = this.entity.p, team = ref.team, x = ref.x, y = ref.y;
       coords = this.nextCoords();
-      this.entity.stage.insert(new Q.Marker(coords));
-      return this.entity.stage.insert(new Q.Ship({
+      ship = new Q.Ship({
         x: x,
         y: y,
-        team: team,
+        team: coords.team,
         targetXY: coords
-      }));
+      });
+      ship.on('reached-target', function(arg) {
+        var item, target;
+        item = arg.item, target = arg.target;
+        ship.off('reached-target');
+        ship.moveTo({
+          x: x,
+          y: y
+        });
+        return ship.on('reached-target', function(arg1) {
+          var item, target;
+          item = arg1.item, target = arg1.target;
+          return ship.destroy();
+        });
+      });
+      return this.entity.stage.insert(ship);
     }
   });
 
@@ -208,17 +233,16 @@
     init: function(p) {
       var scale;
       scale = _.max([0.4, Math.ceil(Math.random() * 10) / 10]);
-      console.log('SCALE', scale);
       this._super(Q._extend({
+        sensor: true,
         asset: this.randomAsset(),
         scale: scale,
         team: Team.NONE,
-        type: Q.SPRITE_NONE,
+        type: Q.SPRITE_DEFAULT,
         buildRate: 500
       }, p));
       this.add('2d');
-      this.add('shipBuilder');
-      return this.on("hit.sprite", this.onCollision);
+      return this.add('shipBuilder');
     },
     randomAsset: function() {
       var assets;
@@ -236,22 +260,18 @@
       ctx.arc(0, 0, this.asset().width / 2, 0, 180);
       ctx.fill();
       return ctx.restore();
-    },
-    onCollision: (function(_this) {
-      return function(collision) {
-        return console.log('HIT');
-      };
-    })(this)
+    }
   });
 
   Q.Sprite.extend("Ship", {
     init: function(p) {
       this._super(_.defaults(p, {
-        type: Q.SPRITE_NONE,
+        type: Q.SPRITE_DEFAULT,
+        sensor: true,
         team: Team.NONE,
         asset: '/assets/images/star.png',
-        maxSpeed: 80,
-        acceleration: 50,
+        maxSpeed: 30,
+        acceleration: 10,
         angle: 90,
         scale: 0.75,
         opacity: 0.5,
@@ -259,7 +279,8 @@
         lastY: p.y
       }));
       this.add('2d');
-      return this.on("hit.sprite", this.onCollision);
+      this.on("sensor", this, 'onCollision');
+      return this.on("hit.sprite", this, 'onCollision');
     },
     draw: function(ctx) {
       ctx.globalCompositeOperation = 'lighter';
@@ -303,29 +324,54 @@
           return _.min([_this.p.maxSpeed, speed]);
         };
       })(this);
-      return limited(speed);
+      return speed;
+    },
+    isAt: function(arg) {
+      var x, y;
+      x = arg.x, y = arg.y;
+      return Math.abs(this.p.x - x) < 1 && Math.abs(this.p.y - y) < 1;
+    },
+    stop: function() {
+      return this.p.vy = this.p.vx = 0;
+    },
+    onReachedTarget: function(target) {
+      this.stop();
+      this.p.lastX = this.p.x;
+      this.p.lastY = this.p.y;
+      delete this.p.target;
+      delete this.p.targetXY;
+      return this.trigger('reached-target', {
+        item: this,
+        target: target
+      });
+    },
+    moveTo: function(coords) {
+      return this.p.targetXY = coords;
     },
     step: function(dt) {
-      var mod, target, targetAngle, xSpeed, ySpeed;
+      var axis, maxStepDistance, stepDistance, target, targetAngle, tripDistance, xDistance, yDistance;
       if (!(target = this.targetCoords())) {
         return;
       }
+      if (this.isAt(target)) {
+        return this.onReachedTarget(target);
+      }
+      maxStepDistance = this.p.maxSpeed;
       targetAngle = Q.angle(this.p.x, this.p.y, target.x, target.y);
-      xSpeed = Q.offsetX(targetAngle, this.p.acceleration) * dt * this.p.acceleration;
-      ySpeed = Q.offsetY(targetAngle, this.p.acceleration) * dt * this.p.acceleration;
-      mod = {
-        x: targetAngle >= 180 ? -1 : 1,
+      tripDistance = Q.distance(this.p.x, this.p.y, target.x, target.y);
+      stepDistance = _.min([tripDistance, maxStepDistance]);
+      xDistance = Q.offsetX(targetAngle, stepDistance);
+      yDistance = Q.offsetY(targetAngle, stepDistance);
+      axis = {
+        x: targetAngle >= 180 ? 1 : -1,
         y: targetAngle >= 90 || targetAngle <= 270 ? -1 : 1
       };
-      this.p.angle = targetAngle;
-      this.p.vx = this.applyInertia(xSpeed) * mod.x;
-      return this.p.vy = this.applyInertia(ySpeed) * mod.y;
+      this.p.vx = xDistance * axis.x;
+      return this.p.vy = yDistance * axis.y;
     },
-    onCollision: (function(_this) {
-      return function(collision) {
-        return console.log('HIT');
-      };
-    })(this)
+    onCollision: function(collision) {
+      return console.log('ship');
+    }
   });
 
   Q.Sprite.extend('Star', {

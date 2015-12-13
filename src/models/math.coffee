@@ -12,20 +12,22 @@ Quintus.Math = (Q) ->
     result
 
   Q.angle = (fromX, fromY, toX, toY) ->
-    distX   = toX - fromX
-    distY   = toY - fromY
+    distX   = toX - fromX # opposite
+    distY   = toY - fromY # adjacent
     radians = Math.atan2 distY, distX
 
-    Q.radiansToDegrees(radians) - 90
+    Q.radiansToDegrees(radians) - 90 # pythag - TOA
 
   Q.distance = (fromX, fromY, toX = 0, toY = 0) ->
-    Math.sqrt Math.pow(fromX - toX, 2) + Math.pow(fromY - toY, 2) # pythag
+    opposite = fromX - toX
+    adjacent = fromY - toY
+    Math.sqrt Math.pow(opposite, 2) + Math.pow(adjacent, 2) # pythag - Hypotenuse
 
   Q.offsetX = (angle, radius) ->
-    Math.sin(angle / 180 * Math.PI) * radius
+    Math.sin(angle / 180 * Math.PI) * radius # opposite
 
   Q.offsetY = (angle, radius) ->
-    - Math.cos(angle / 180 * Math.PI) * radius
+    - Math.cos(angle / 180 * Math.PI) * radius # adjacent
 
   Q.degreesToRadians = (degrees) ->
     degrees * (Math.PI / 180)
