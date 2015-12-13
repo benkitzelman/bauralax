@@ -7,16 +7,17 @@ Q.Sprite.extend "Planet",
       asset     : @randomAsset()
       scale     : scale
       team      : Team.NONE
-      type      : Q.SPRITE_DEFAULT
-      buildRate : 500
+      type      : Q.SPRITE_UI
+      buildRate : 2000
     , p
 
     @add '2d'
     @add 'shipBuilder'
+    @add 'shipAbsorber'
+    @on 'touch', @, 'onTouch'
 
-    # Write event handlers to respond hook into behaviors.
-    # hit.sprite is called everytime the player collides with a sprite
-    # @on "hit.sprite", @onCollision
+  onTouch: (args...) ->
+    console.log 'planet touch', args...
 
   randomAsset: ->
     assets = [0..1].map (i) -> "/assets/images/planet#{i}.png"

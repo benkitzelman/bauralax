@@ -3,6 +3,7 @@ class Game
     # "sprites.json"
     # "sprites.png"
     "star.png"
+    "ship.png"
     "planet0.png"
     "planet1.png"
   ]

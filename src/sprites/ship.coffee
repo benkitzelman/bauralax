@@ -1,10 +1,12 @@
 Q.Sprite.extend "Ship",
   init: (p) ->
     @_super _.defaults p,
-      type         : Q.SPRITE_DEFAULT
+      type         : Q.SPRITE_UI
       sensor       : true
       team         : Team.NONE
-      asset        : '/assets/images/star.png' # HACK - this should be ignored
+      asset        : '/assets/images/ship.png' # HACK - this should be ignored
+      width        : 10
+      height       : 10
       maxSpeed     : 30
       acceleration : 10
       angle        : 90
@@ -17,19 +19,17 @@ Q.Sprite.extend "Ship",
 
     # Write event handlers to respond hook into behaviors.
     # hit.sprite is called everytime the player collides with a sprite
-    # @on "hit.sprite", @onCollision
-    @on "sensor", @, 'onCollision'
     @on "hit.sprite", @, 'onCollision'
 
   draw: (ctx) ->
-    ctx.globalCompositeOperation = 'lighter'
     @_super(ctx)
-
+    ctx.globalCompositeOperation = 'lighter'
     ctx.save()
 
     ctx.beginPath()
     ctx.fillStyle = @p.team.color(0.75)
-    ctx.arc(0, 0, @asset().width / 2, 0, 180)
+    # ctx.arc(0, 0, @asset().width / 2, 0, 180)
+    ctx.arc(0, 0, @p.width / 2, 0, 180)
     ctx.fill()
 
     ctx.restore()
@@ -75,6 +75,9 @@ Q.Sprite.extend "Ship",
   moveTo: (coords) ->
     @p.targetXY = coords
 
+  isTeammate: (entity) ->
+    entity.p.team is @p.team
+
   step: (dt) ->
     return unless target = @targetCoords()
     return @onReachedTarget( target ) if @isAt(target)
@@ -94,8 +97,15 @@ Q.Sprite.extend "Ship",
     @p.vx = xDistance * axis.x
     @p.vy = yDistance * axis.y
 
+  ricochetteOff: (entity) ->
+    console.log 'ricochetteOff'
+    { x, y } = entity.p
+    @moveTo(x: x + 3, y: y + 3)
+
   onCollision: (collision) ->
-    console.log 'ship'
-    # Q.stageScene "endGame",1, label: "You Lose!"
-    # Remove the player to prevent them from moving
-    # @destroy()
+    console.log 'collision'
+    if collision.obj.isA("Ship")
+      return @destroy() unless @isTeammate( collision.obj )
+      @ricochetteOff( collision.obj )
+
+
