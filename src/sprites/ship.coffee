@@ -86,9 +86,7 @@ Q.Sprite.extend "Ship",
 
   moveAround: ->
     { x, y, path, angle } = @p
-    # angle = Q.normalizeAngle angle
-    # minAngle = Q.normalizeAngle(angle - 40)
-    # maxAngle = Q.normalizeAngle(angle + 40)
+
     newAngle = Q.random 0, 360
     dist     = Q.random 2, 15 # hypot
     path.moveToThenResume
