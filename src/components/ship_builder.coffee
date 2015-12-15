@@ -23,7 +23,7 @@ Q.component 'shipBuilder',
     { team, x, y } = @entity.p
 
     coords = @nextCoords()
-    ship = new Q.Ship(x: x, y: y, team: coords.team, targetXY: coords)
+    ship = new Q.Ship(x: x, y: y, team: coords.team, path: [ coords ])
     # ship.on 'reached-target', ({item, target}) ->
     #   ship.off 'reached-target'
 

@@ -5,4 +5,5 @@ Q.component 'selectionControls',
 
   moveShips: ({p, obj}) ->
     console.log 'TOUCHED', p.x, p.y
-    _.each Q.select("Ship")?.items, (ship) -> ship.moveTo p
+    _.each Q.select("Ship")?.items, (ship) ->
+      ship.moveTo p

@@ -18,6 +18,10 @@ Quintus.Math = (Q) ->
 
     Q.radiansToDegrees(radians) - 90 # pythag - TOA
 
+  Q.axis = (angle) ->
+    x: if angle >= 180 then 1 else -1
+    y: if angle >= 90 or angle <= 270 then -1 else 1
+
   Q.distance = (fromX, fromY, toX = 0, toY = 0) ->
     opposite = fromX - toX
     adjacent = fromY - toY
