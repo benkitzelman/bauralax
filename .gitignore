@@ -6,37 +6,8 @@ sync-remote.sh
 lib-cov
 
 /tmp
-/log
-/start
-/start-test
-/start-api
-/start-production
 /node_modules
-/pids
-/results
-
 npm-debug.log.DS_Store
 
-/public/git.json
-/public/manifest.json
-/public/views.*.js
-/public/lib.*.js
-/public/app.*.js
-/public/views.js
-/public/lib.js
-/public/app.js
-/public/app.*map
-/public/app.src.coffee
-/public/lib.*.css
-/public/app.*.css
-/public/app-*.css
-/public/lib.css
-/public/app.css
-/public/*.html
-!/public/blank.html
-/public/translations/*.json
-/data/translations/*.pot
-/data/seed/production*
 /.vagrant
 
-/coverage/
