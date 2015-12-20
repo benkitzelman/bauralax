@@ -10,8 +10,8 @@ Q.component 'shipBuilder',
   nextCoords: ->
     { x, y } = @entity.p
 
-    rotation = @entity.p.shipBuilderRotation or 18
-    dist     = @entity.p.shipBuilderDistance or (@entity.asset().width / 2 + 10) # hypot
+    rotation = @entity.p.shipEmitRotation or 18
+    dist     = @entity.p.shipEmitDistance or (@entity.asset().width / 2 + 10) # hypot
 
     @lastAngle ?= 0
     @lastAngle += rotation

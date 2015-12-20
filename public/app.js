@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2015-12-15
+/*! bauralux - v1.0.0 - 2015-12-20
 * Copyright (c) 2015  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16376,8 +16376,10 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var Game, Path, Target, Team,
-    slice = [].slice;
+  var Game, Path, Target, Team, TouchInput,
+    slice = [].slice,
+    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
 
   Quintus.Math = function(Q) {
     Q.random = function(from, to) {
@@ -16446,12 +16448,41 @@ Quintus.UI = function(Q) {
 
   Q.component('selectionControls', {
     added: function() {
-      return Q.touchInput.on('touch', this, 'moveShips');
+      var input;
+      this.stage = this.entity;
+      input = new TouchInput({
+        stage: this.stage
+      });
+      input.on('touch-drag-change', this, 'drawSelection');
+      input.on('touch-drag-end', this, 'removeSelection');
+      return input.on('touch', this, 'moveShips');
+    },
+    drawSelection: function(arg) {
+      var current, origin;
+      origin = arg.origin, current = arg.current;
+      this.selector = this.findOrCreateSelector();
+      this.selector.p.radius = Q.distance(origin.p.px, origin.p.py, current.p.px, current.p.py);
+      this.selector.p.x = origin.p.px;
+      return this.selector.p.y = origin.p.py;
+    },
+    removeSelection: function() {
+      var ref;
+      return (ref = this.selector) != null ? ref.destroy() : void 0;
+    },
+    findOrCreateSelector: function() {
+      var ref, selector;
+      if (selector = _.first((ref = Q.select("SelectionBand")) != null ? ref.items : void 0)) {
+        return selector;
+      }
+      this.stage.insert(selector = new Q.SelectionBand({
+        x: 0,
+        y: 0
+      }));
+      return selector;
     },
     moveShips: function(arg) {
       var obj, p, ref;
       p = arg.p, obj = arg.obj;
-      console.log('TOUCHED', p.x, p.y);
       return _.each((ref = Q.select("Ship")) != null ? ref.items : void 0, function(ship) {
         return ship.moveTo(p);
       });
@@ -16475,8 +16506,8 @@ Quintus.UI = function(Q) {
     nextCoords: function() {
       var dist, ref, rotation, x, y;
       ref = this.entity.p, x = ref.x, y = ref.y;
-      rotation = this.entity.p.shipBuilderRotation || 18;
-      dist = this.entity.p.shipBuilderDistance || (this.entity.asset().width / 2 + 10);
+      rotation = this.entity.p.shipEmitRotation || 18;
+      dist = this.entity.p.shipEmitDistance || (this.entity.asset().width / 2 + 10);
       if (this.lastAngle == null) {
         this.lastAngle = 0;
       }
@@ -16678,6 +16709,108 @@ Quintus.UI = function(Q) {
 
   })();
 
+  TouchInput = (function(superClass) {
+    extend(TouchInput, superClass);
+
+    function TouchInput(opts) {
+      _.extend(this, opts);
+      this.state = 'waiting';
+      this.chain('touch', this.onTouch);
+      this.chain('touchEnd', this.onTouchEnd);
+      this.chain('drag', this.onDrag);
+    }
+
+    TouchInput.prototype.selectionState = function() {
+      return this.state;
+    };
+
+    TouchInput.prototype.destroy = function() {
+      this.unchain('touch');
+      this.unchain('touchEnd');
+      return this.unchain('drag');
+    };
+
+    TouchInput.prototype.chain = function(fnName, execFn) {
+      var originalFn, self;
+      if (this.wrappedFns == null) {
+        this.wrappedFns = {};
+      }
+      this.wrappedFns[fnName] = originalFn = Q.touchInput[fnName];
+      self = this;
+      return Q.touchInput[fnName] = function() {
+        var args;
+        args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+        originalFn.apply(Q.touchInput, args);
+        return execFn.apply(self, args);
+      };
+    };
+
+    TouchInput.prototype.unchain = function(fnName) {
+      var originalFn;
+      if (!(originalFn = this.wrappedFns[fnName])) {
+        return;
+      }
+      if (!Q.touchInput[fnName]) {
+        return;
+      }
+      return Q.touchInput[fnName] = originalFn;
+    };
+
+    TouchInput.prototype.normalize = function(touch, stage) {
+      var canvasX, canvasY, evt;
+      stage = stage || this.stage;
+      canvasX = touch.offsetX || touch.layerX || (touch.pageX - Q.touch.offsetX);
+      canvasY = touch.offsetY || touch.layerY || (touch.pageY - Q.touch.offsetY);
+      evt = new Q.Evented();
+      evt.grid = {};
+      evt.p = {
+        w: 1,
+        h: 1,
+        cx: 0,
+        cy: 0
+      };
+      evt.p.ox = evt.p.px = canvasX / Q.cssWidth * Q.width;
+      evt.p.oy = evt.p.py = canvasY / Q.cssHeight * Q.height;
+      if (stage.viewport) {
+        evt.p.px /= stage.viewport.scale;
+        evt.p.py /= stage.viewport.scale;
+        evt.p.px += stage.viewport.x;
+        evt.p.py += stage.viewport.y;
+      }
+      evt.p.x = evt.p.px;
+      evt.p.y = evt.p.py;
+      evt.obj = null;
+      return evt;
+    };
+
+    TouchInput.prototype.onTouch = function(e) {
+      this.activeTouch = this.normalize(e);
+      return this.trigger('touch-start', this.activeTouch);
+    };
+
+    TouchInput.prototype.onTouchEnd = function(e) {
+      var evtName;
+      evtName = this.state === 'selecting' ? 'touch-drag-end' : 'touch';
+      this.trigger(evtName, this.activeTouch, this.normalize(e));
+      this.state = 'waiting';
+      return delete this.activeTouch;
+    };
+
+    TouchInput.prototype.onDrag = function(e) {
+      if (!this.activeTouch) {
+        return;
+      }
+      this.state = 'selecting';
+      return this.trigger('touch-drag-change', {
+        origin: this.activeTouch,
+        current: this.normalize(e)
+      });
+    };
+
+    return TouchInput;
+
+  })(Q.Evented);
+
   Q.Sprite.extend('Marker', {
     init: function(p) {
       return this._super(_.defaults(p, {
@@ -16715,7 +16848,8 @@ Quintus.UI = function(Q) {
         scale: scale,
         team: Team.NONE,
         type: Q.SPRITE_UI,
-        buildRate: 2000
+        buildRate: 2000,
+        shipEmitDistance: 20
       }, p));
       this.add('2d');
       this.add('shipBuilder');
@@ -16741,6 +16875,25 @@ Quintus.UI = function(Q) {
       ctx.beginPath();
       ctx.fillStyle = this.p.team.color(0.25);
       ctx.arc(0, 0, this.asset().width / 2, 0, 180);
+      ctx.fill();
+      return ctx.restore();
+    }
+  });
+
+  Q.Sprite.extend('SelectionBand', {
+    init: function(p) {
+      return this._super(_.defaults(p, {
+        asset: '/assets/images/star.png',
+        type: Q.SPRITE_NONE,
+        radius: 2
+      }));
+    },
+    draw: function(ctx) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.save();
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.arc(0, 0, this.p.radius, 0, 180);
       ctx.fill();
       return ctx.restore();
     }
@@ -16838,11 +16991,11 @@ Quintus.UI = function(Q) {
       var angle, dist, newAngle, path, ref, x, y;
       ref = this.p, x = ref.x, y = ref.y, path = ref.path, angle = ref.angle;
       newAngle = Q.random(0, 360);
-      dist = Q.random(2, 15);
+      dist = Q.random(2, 8);
       return path.moveToThenResume({
         type: 'hit',
-        x: x + (Q.offsetX(newAngle, dist) * Q.axis(newAngle).x),
-        y: y + (Q.offsetY(newAngle, dist) * Q.axis(newAngle).y)
+        x: x + (Q.offsetX(newAngle, dist)),
+        y: y + (Q.offsetY(newAngle, dist))
       });
     },
     onCollision: function(collision) {

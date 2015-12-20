@@ -88,11 +88,11 @@ Q.Sprite.extend "Ship",
     { x, y, path, angle } = @p
 
     newAngle = Q.random 0, 360
-    dist     = Q.random 2, 15 # hypot
+    dist     = Q.random 2, 8 # hypot
     path.moveToThenResume
       type: 'hit'
-      x: x + ( Q.offsetX( newAngle, dist ) * Q.axis( newAngle ).x )
-      y: y + ( Q.offsetY( newAngle, dist ) * Q.axis( newAngle ).y )
+      x: x + ( Q.offsetX( newAngle, dist ) )
+      y: y + ( Q.offsetY( newAngle, dist ) )
 
   onCollision: (collision) ->
     if collision.obj.isA("Ship")

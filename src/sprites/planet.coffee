@@ -3,12 +3,13 @@ Q.Sprite.extend "Planet",
     scale  = _.max [0.4, (Math.ceil(Math.random() * 10) / 10)]
 
     @_super Q._extend
-      sensor    : true
-      asset     : @randomAsset()
-      scale     : scale
-      team      : Team.NONE
-      type      : Q.SPRITE_UI
-      buildRate : 2000
+      sensor           : true
+      asset            : @randomAsset()
+      scale            : scale
+      team             : Team.NONE
+      type             : Q.SPRITE_UI
+      buildRate        : 2000
+      shipEmitDistance : 20
     , p
 
     @add '2d'
