@@ -16461,9 +16461,11 @@ Quintus.UI = function(Q) {
       var current, origin;
       origin = arg.origin, current = arg.current;
       this.selector = this.findOrCreateSelector();
-      this.selector.p.radius = Q.distance(origin.p.px, origin.p.py, current.p.px, current.p.py);
-      this.selector.p.x = origin.p.px;
-      return this.selector.p.y = origin.p.py;
+      return this.selector.redraw({
+        radius: Q.distance(origin.p.px, origin.p.py, current.p.px, current.p.py),
+        x: origin.p.px,
+        y: origin.p.py
+      });
     },
     removeSelection: function() {
       var ref;
@@ -16480,11 +16482,21 @@ Quintus.UI = function(Q) {
       }));
       return selector;
     },
+    deselectAll: function() {
+      var ref;
+      return _.each((ref = Q.select("Ship")) != null ? ref.items : void 0, function(ship) {
+        return ship.deselect();
+      });
+    },
     moveShips: function(arg) {
       var obj, p, ref;
       p = arg.p, obj = arg.obj;
       return _.each((ref = Q.select("Ship")) != null ? ref.items : void 0, function(ship) {
-        return ship.moveTo(p);
+        if (!ship.isSelected()) {
+          return;
+        }
+        ship.moveTo(p);
+        return ship.deselect();
       });
     }
   });
@@ -16528,6 +16540,21 @@ Quintus.UI = function(Q) {
         path: [coords]
       });
       return this.entity.stage.insert(ship);
+    }
+  });
+
+  Q.component('ttl', {
+    added: function() {
+      this.startedAt = this.now();
+      return this.entity.on("step", this, "step");
+    },
+    step: function() {
+      if (this.now() > this.startedAt + this.entity.p.ttl) {
+        return this.entity.destroy();
+      }
+    },
+    now: function() {
+      return new Date().getTime();
     }
   });
 
@@ -16811,6 +16838,40 @@ Quintus.UI = function(Q) {
 
   })(Q.Evented);
 
+  Q.Sprite.extend('Explosion', {
+    init: function(p) {
+      this._super(Q._extend({
+        asset: '/assets/images/ship.png',
+        type: Q.SPRITE_NONE,
+        opacity: .5,
+        opacityRate: -.03,
+        w: 5,
+        z: 5,
+        ttl: 200
+      }, p));
+      return this.add('ttl');
+    },
+    draw: function(ctx) {
+      ctx.save();
+      ctx.fillStyle = "rgba(245, 185, 62, 0.75)";
+      ctx.beginPath();
+      ctx.arc(0, 0, this.p.w * 3, 0, 180);
+      ctx.fill();
+      return ctx.restore();
+    },
+    step: function(dt) {
+      if (this.p.opacity >= 0) {
+        return this.p.opacity += this.p.opacityRate;
+      } else {
+        return this.destroy();
+      }
+    },
+    draw: function(ctx) {
+      ctx.globalCompositeOperation = 'lighter';
+      return this._super(ctx);
+    }
+  });
+
   Q.Sprite.extend('Marker', {
     init: function(p) {
       return this._super(_.defaults(p, {
@@ -16882,20 +16943,44 @@ Quintus.UI = function(Q) {
 
   Q.Sprite.extend('SelectionBand', {
     init: function(p) {
-      return this._super(_.defaults(p, {
+      this._super(_.defaults(p, {
+        type: Q.SPRITE_DEFAULT,
+        sensor: true,
         asset: '/assets/images/star.png',
-        type: Q.SPRITE_NONE,
+        w: 4,
+        h: 4,
         radius: 2
       }));
+      return this.on('hit.sprite', this, 'onCollision');
+    },
+    redraw: function(arg) {
+      var radius, x, y;
+      radius = arg.radius, x = arg.x, y = arg.y;
+      this.p.radius = radius;
+      this.p.w = radius * 2;
+      this.p.h = radius * 2;
+      this.p.x = x;
+      this.p.y = y;
+      return Q._generatePoints(this, true);
     },
     draw: function(ctx) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.save();
       ctx.beginPath();
       ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-      ctx.arc(0, 0, this.p.radius, 0, 180);
+      ctx.arc(this.p.radius / 2, this.p.radius / 2, this.p.radius / 2, 0, 180);
       ctx.fill();
       return ctx.restore();
+    },
+    onCollision: function(collision) {
+      var ship;
+      if (!(ship = collision.obj).isA("Ship")) {
+        return;
+      }
+      if (!ship.belongsToPlayer()) {
+        return;
+      }
+      return ship.select();
     }
   });
 
@@ -16906,14 +16991,13 @@ Quintus.UI = function(Q) {
         sensor: true,
         team: Team.NONE,
         asset: '/assets/images/ship.png',
-        width: 10,
-        height: 10,
         maxSpeed: 30,
         acceleration: 10,
         angle: 90,
         scale: 0.75,
         opacity: 0.5,
         lastX: p.x,
+        isSelected: false,
         lastY: p.y,
         path: new Path
       }));
@@ -16925,12 +17009,39 @@ Quintus.UI = function(Q) {
     },
     draw: function(ctx) {
       this._super(ctx);
+      this.drawTeamColour(ctx);
+      this.drawHaze(ctx);
+      if (this.p.isSelected) {
+        return this.drawSelectionMarker(ctx);
+      }
+    },
+    drawTeamColour: function(ctx) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.save();
       ctx.beginPath();
       ctx.fillStyle = this.p.team.color(0.75);
-      ctx.arc(0, 0, this.p.width / 2, 0, 180);
+      ctx.arc(0, 0, this.p.w / 2, 0, 180);
       ctx.fill();
+      return ctx.restore();
+    },
+    drawHaze: function(ctx) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.save();
+      ctx.beginPath();
+      ctx.fillStyle = this.p.team.color(0.05);
+      ctx.arc(0, 0, this.p.w + 10, 0, 180);
+      ctx.fill();
+      return ctx.restore();
+    },
+    drawSelectionMarker: function(ctx) {
+      var radius;
+      radius = 5;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, 180);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.stroke();
       return ctx.restore();
     },
     currentTarget: function() {
@@ -16965,6 +17076,18 @@ Quintus.UI = function(Q) {
     isTeammate: function(entity) {
       return entity.p.team === this.p.team;
     },
+    belongsToPlayer: function() {
+      return true;
+    },
+    select: function() {
+      return this.p.isSelected = true;
+    },
+    isSelected: function() {
+      return this.p.isSelected;
+    },
+    deselect: function() {
+      return delete this.p.isSelected;
+    },
     step: function(dt) {
       var axis, maxStepDistance, stepDistance, target, targetAngle, tripDistance, xDistance, yDistance;
       if (!(target = this.currentTarget())) {
@@ -16998,10 +17121,19 @@ Quintus.UI = function(Q) {
         y: y + (Q.offsetY(newAngle, dist))
       });
     },
+    explode: function() {
+      this.stage.insert(new Q.Explosion({
+        x: this.p.x,
+        y: this.p.y,
+        vx: this.p.vx,
+        vy: this.p.vy
+      }));
+      return this.destroy();
+    },
     onCollision: function(collision) {
       if (collision.obj.isA("Ship")) {
         if (!this.isTeammate(collision.obj)) {
-          return this.destroy();
+          return this.explode();
         }
       }
     }

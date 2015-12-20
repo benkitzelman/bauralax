@@ -4,15 +4,14 @@ Q.Sprite.extend "Ship",
       type         : Q.SPRITE_DEFAULT
       sensor       : true
       team         : Team.NONE
-      asset        : '/assets/images/ship.png' # HACK - this should be ignored
-      width        : 10
-      height       : 10
+      asset        : '/assets/images/ship.png'
       maxSpeed     : 30
       acceleration : 10
       angle        : 90
       scale        : 0.75
       opacity      : 0.5
       lastX        : p.x
+      isSelected   : false
       lastY        : p.y
       path         : new Path
 
@@ -21,20 +20,45 @@ Q.Sprite.extend "Ship",
 
     @add '2d'
 
-    # Write event handlers to respond hook into behaviors.
-    # hit.sprite is called everytime the player collides with a sprite
     @on "hit.sprite", @, 'onCollision'
 
   draw: (ctx) ->
-    @_super(ctx)
+    @_super ctx
+    @drawTeamColour ctx
+    @drawHaze ctx
+    @drawSelectionMarker( ctx ) if @p.isSelected
+
+  drawTeamColour: (ctx) ->
     ctx.globalCompositeOperation = 'lighter'
     ctx.save()
 
     ctx.beginPath()
-    ctx.fillStyle = @p.team.color(0.75)
-    # ctx.arc(0, 0, @asset().width / 2, 0, 180)
-    ctx.arc(0, 0, @p.width / 2, 0, 180)
+    ctx.fillStyle = @p.team.color 0.75
+    ctx.arc 0, 0, @p.w / 2, 0, 180
     ctx.fill()
+
+    ctx.restore()
+
+  drawHaze: (ctx) ->
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.save()
+
+    ctx.beginPath()
+    ctx.fillStyle = @p.team.color 0.05
+    ctx.arc 0, 0, @p.w + 10, 0, 180
+    ctx.fill()
+
+    ctx.restore()
+
+  drawSelectionMarker: (ctx) ->
+    radius = 5
+    ctx.save()
+
+    ctx.beginPath()
+    ctx.arc 0, 0, radius, 0, 180
+    ctx.lineWidth = 2
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"
+    ctx.stroke()
 
     ctx.restore()
 
@@ -63,6 +87,18 @@ Q.Sprite.extend "Ship",
 
   isTeammate: (entity) ->
     entity.p.team is @p.team
+
+  belongsToPlayer: ->
+    true
+
+  select: ->
+    @p.isSelected = true
+
+  isSelected: ->
+    @p.isSelected
+
+  deselect: ->
+    delete @p.isSelected
 
   step: (dt) ->
     return unless target = @currentTarget()
@@ -94,8 +130,18 @@ Q.Sprite.extend "Ship",
       x: x + ( Q.offsetX( newAngle, dist ) )
       y: y + ( Q.offsetY( newAngle, dist ) )
 
+  explode: ->
+    @stage.insert new Q.Explosion
+      x:  @p.x
+      y:  @p.y
+      vx: @p.vx
+      vy: @p.vy
+      # angle: otherEntity.p.angle - 180
+
+    @destroy()
+
   onCollision: (collision) ->
     if collision.obj.isA("Ship")
-      return @destroy() unless @isTeammate( collision.obj )
+      return @explode() unless @isTeammate( collision.obj )
 
 

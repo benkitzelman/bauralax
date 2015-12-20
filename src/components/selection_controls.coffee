@@ -8,10 +8,11 @@ Q.component 'selectionControls',
     input.on 'touch', @, 'moveShips'
 
   drawSelection: ({origin, current}) ->
-    @selector          = @findOrCreateSelector()
-    @selector.p.radius = Q.distance( origin.p.px, origin.p.py, current.p.px, current.p.py )
-    @selector.p.x      = origin.p.px
-    @selector.p.y      = origin.p.py
+    @selector = @findOrCreateSelector()
+    @selector.redraw
+      radius : Q.distance( origin.p.px, origin.p.py, current.p.px, current.p.py )
+      x      : origin.p.px
+      y      : origin.p.py
 
   removeSelection: ->
     @selector?.destroy()
@@ -21,6 +22,11 @@ Q.component 'selectionControls',
     @stage.insert( selector = new Q.SelectionBand(x:0, y:0) )
     selector
 
+  deselectAll: ->
+    _.each Q.select("Ship")?.items, (ship) -> ship.deselect()
+
   moveShips: ({p, obj}) ->
     _.each Q.select("Ship")?.items, (ship) ->
+      return unless ship.isSelected()
       ship.moveTo p
+      ship.deselect()
