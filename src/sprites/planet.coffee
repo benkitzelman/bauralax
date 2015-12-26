@@ -34,7 +34,7 @@ Q.Sprite.extend "Planet",
 
     ctx.globalCompositeOperation = 'lighter'
     ctx.beginPath()
-    ctx.fillStyle = @team().color(0.25)
+    ctx.fillStyle = @team().color(0.18)
     ctx.arc(0, 0, @radius(), 0, 180)
     ctx.fill()
 

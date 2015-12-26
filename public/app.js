@@ -17060,7 +17060,7 @@ Quintus.UI = function(Q) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
-      ctx.fillStyle = this.team().color(0.25);
+      ctx.fillStyle = this.team().color(0.18);
       ctx.arc(0, 0, this.radius(), 0, 180);
       ctx.fill();
       return ctx.restore();
@@ -17107,7 +17107,7 @@ Quintus.UI = function(Q) {
       ctx.save();
       ctx.beginPath();
       ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-      ctx.arc(this.p.radius / 2, this.p.radius / 2, this.p.radius / 2, 0, 180);
+      ctx.arc(0, 0, this.p.radius, 0, 180);
       ctx.fill();
       return ctx.restore();
     },
@@ -17115,7 +17115,7 @@ Quintus.UI = function(Q) {
       var dx, dy, rSum;
       dx = this.p.x - sprite.p.x;
       dy = this.p.y - sprite.p.y;
-      rSum = this.p.radius + (sprite.asset().width / 2);
+      rSum = this.p.radius + _.max([sprite.asset().width / 2, 1]);
       return (dx * dx) + (dy * dy) <= (rSum * rSum);
     }
   });

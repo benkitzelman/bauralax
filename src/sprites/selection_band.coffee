@@ -23,7 +23,7 @@ Q.Sprite.extend 'SelectionBand',
 
     ctx.beginPath()
     ctx.fillStyle = "rgba(255, 255, 255, 0.3)"
-    ctx.arc(@p.radius / 2, @p.radius / 2, @p.radius / 2, 0, 180)
+    ctx.arc 0, 0, @p.radius, 0, 180
     ctx.fill()
 
     ctx.restore()
@@ -31,6 +31,6 @@ Q.Sprite.extend 'SelectionBand',
   isInBounds: (sprite) ->
     dx   = @p.x - sprite.p.x
     dy   = @p.y - sprite.p.y
-    rSum = @p.radius + (sprite.asset().width / 2)
+    rSum = @p.radius + _.max([ (sprite.asset().width / 2), 1 ])
     (dx * dx) + (dy * dy) <= (rSum * rSum)
 
