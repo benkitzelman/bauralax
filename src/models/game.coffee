@@ -4,6 +4,7 @@ class Game
     # "sprites.png"
     "star.png"
     "ship.png"
+    "shieldFlare.png"
     "planet0.png"
     "planet1.png"
   ]

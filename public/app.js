@@ -16450,7 +16450,7 @@ Quintus.UI = function(Q) {
     absorb: function(absorber) {
       var base;
       (typeof (base = this.entity).absorb === "function" ? base.absorb() : void 0) || this.entity.destroy();
-      return this.entity.trigger('absorbed', this.entity, absorber);
+      return this.entity.trigger('absorbable:absorbed', this.entity, absorber);
     },
     value: function() {
       return this.entity.p.absorptionValue || 1;
@@ -16499,6 +16499,7 @@ Quintus.UI = function(Q) {
         val: this.valueFor(sprite)
       });
       sprite.absorbable.absorb(this.entity);
+      this.entity.trigger('absorption:absorbed', sprite);
       if (!(this.absorbedPerc() >= 1)) {
         return;
       }
@@ -16675,7 +16676,7 @@ Quintus.UI = function(Q) {
   });
 
   Game = (function() {
-    Game.assets = ["star.png", "ship.png", "planet0.png", "planet1.png"];
+    Game.assets = ["star.png", "ship.png", "shieldFlare.png", "planet0.png", "planet1.png"];
 
     Game.start = function() {
       if (this.started == null) {
@@ -16958,23 +16959,15 @@ Quintus.UI = function(Q) {
   Q.Sprite.extend('Explosion', {
     init: function(p) {
       this._super(Q._extend({
-        asset: '/assets/images/ship.png',
+        asset: '/assets/images/shieldFlare.png',
         type: Q.SPRITE_NONE,
+        color: '#FFFFFF',
         opacity: .5,
         opacityRate: -.03,
-        w: 5,
         z: 5,
         ttl: 200
       }, p));
       return this.add('ttl');
-    },
-    draw: function(ctx) {
-      ctx.save();
-      ctx.fillStyle = "rgba(245, 185, 62, 0.75)";
-      ctx.beginPath();
-      ctx.arc(0, 0, this.p.w * 3, 0, 180);
-      ctx.fill();
-      return ctx.restore();
     },
     step: function(dt) {
       if (this.p.opacity >= 0) {
@@ -16984,8 +16977,21 @@ Quintus.UI = function(Q) {
       }
     },
     draw: function(ctx) {
+      var flareWidth, grd, inner, outer;
+      flareWidth = 20;
+      outer = this.p.radius;
+      inner = _.max([outer - flareWidth, 0]);
+      ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      return this._super(ctx);
+      ctx.beginPath();
+      ctx.arc(0, 0, this.p.radius, 0, 180);
+      grd = ctx.createRadialGradient(0, 0, this.p.radius, 0, 0, inner);
+      grd.addColorStop(0, this.p.color);
+      grd.addColorStop(1, "#FFFF00");
+      ctx.fillStyle = grd;
+      ctx.fill();
+      ctx.closePath();
+      return ctx.restore();
     }
   });
 
@@ -17034,7 +17040,8 @@ Quintus.UI = function(Q) {
       this.add('shipBuilder');
       this.add('absorber');
       this.on('touch', this, 'onTouch');
-      return this.on('absorption:target-met', this, 'onAbsorptionTarget');
+      this.on('absorption:target-met', this, 'onAbsorptionTargetMet');
+      return this.on('absorption:absorbed', this, 'onAbsorbed');
     },
     onTouch: function() {
       var args;
@@ -17054,13 +17061,23 @@ Quintus.UI = function(Q) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
       ctx.fillStyle = this.team().color(0.25);
-      ctx.arc(0, 0, this.asset().width / 2, 0, 180);
+      ctx.arc(0, 0, this.radius(), 0, 180);
       ctx.fill();
       return ctx.restore();
     },
-    onAbsorptionTarget: function(absorbingTeam) {
-      console.log('Absorption!!', absorbingTeam);
+    radius: function() {
+      return this.asset().width / 2;
+    },
+    onAbsorptionTargetMet: function(absorbingTeam) {
       return this.p.team = absorbingTeam;
+    },
+    onAbsorbed: function(entity) {
+      return this.stage.insert(new Q.ShieldFlare({
+        x: this.p.x,
+        y: this.p.y,
+        color: entity.team().color(0.8),
+        radius: (this.radius() + 20) * this.p.scale
+      }));
     }
   });
 
@@ -17103,6 +17120,45 @@ Quintus.UI = function(Q) {
     }
   });
 
+  Q.Sprite.extend('ShieldFlare', {
+    init: function(p) {
+      this._super(Q._extend({
+        asset: '/assets/images/shieldFlare.png',
+        type: Q.SPRITE_NONE,
+        color: '#FFFFFF',
+        opacity: .5,
+        opacityRate: -.03,
+        z: 5,
+        ttl: 200
+      }, p));
+      return this.add('ttl');
+    },
+    step: function(dt) {
+      if (this.p.opacity >= 0) {
+        return this.p.opacity += this.p.opacityRate;
+      } else {
+        return this.destroy();
+      }
+    },
+    draw: function(ctx) {
+      var flareWidth, grd, inner, outer;
+      flareWidth = 20;
+      outer = this.p.radius;
+      inner = outer - flareWidth;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.p.radius, 0, 180);
+      grd = ctx.createRadialGradient(0, 0, this.p.radius, 0, 0, inner);
+      grd.addColorStop(0, this.p.color);
+      grd.addColorStop(1, "transparent");
+      ctx.fillStyle = grd;
+      ctx.fill();
+      ctx.closePath();
+      return ctx.restore();
+    }
+  });
+
   Q.Sprite.extend("Ship", {
     init: function(p) {
       this._super(_.defaults(p, {
@@ -17126,8 +17182,7 @@ Quintus.UI = function(Q) {
       this.add('2d');
       this.add('teamResource');
       this.add('absorbable');
-      this.on("hit.sprite", this, 'onCollision');
-      return this.on("absorbed", this, 'onAbsorbed');
+      return this.on("hit.sprite", this, 'onCollision');
     },
     draw: function(ctx) {
       this._super(ctx);
@@ -17237,24 +17292,27 @@ Quintus.UI = function(Q) {
         y: y + (Q.offsetY(newAngle, dist))
       });
     },
-    onAbsorbed: function() {
+    absorb: function() {
       return this.explode();
     },
-    explode: function() {
+    explode: function(color) {
       this.stage.insert(new Q.Explosion({
         x: this.p.x,
         y: this.p.y,
         vx: this.p.vx,
-        vy: this.p.vy
+        vy: this.p.vy,
+        radius: this.asset().width * 3,
+        color: color || this.team().color(0.75)
       }));
       return this.destroy();
     },
     onCollision: function(collision) {
+      var base;
       if (this.isTeammate(collision.obj) || !this.isTeamResource(collision.obj)) {
         return;
       }
       if (collision.obj.isA("Ship")) {
-        return this.explode();
+        return this.explode(typeof (base = collision.obj).team === "function" ? base.team().color(0.75) : void 0);
       }
     }
   });

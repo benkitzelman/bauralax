@@ -1,4 +1,5 @@
-Q.Sprite.extend 'Explosion',
+Q.Sprite.extend 'ShieldFlare',
+
   init: (p) ->
     @_super Q._extend
         asset       : '/assets/images/shieldFlare.png'
@@ -21,16 +22,17 @@ Q.Sprite.extend 'Explosion',
   draw: (ctx) ->
     flareWidth = 20
     outer      = @p.radius
-    inner      = _.max [ outer - flareWidth, 0 ]
+    inner      = outer - flareWidth
 
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
     ctx.beginPath()
+
     ctx.arc 0, 0, @p.radius, 0, 180
 
     grd = ctx.createRadialGradient 0, 0, @p.radius, 0, 0, inner
     grd.addColorStop 0, @p.color
-    grd.addColorStop 1, "#FFFF00"
+    grd.addColorStop 1, "transparent"
     ctx.fillStyle = grd
     ctx.fill()
 

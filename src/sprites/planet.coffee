@@ -18,7 +18,8 @@ Q.Sprite.extend "Planet",
     @add 'absorber'
 
     @on 'touch', @, 'onTouch'
-    @on 'absorption:target-met', @, 'onAbsorptionTarget'
+    @on 'absorption:target-met', @, 'onAbsorptionTargetMet'
+    @on 'absorption:absorbed', @, 'onAbsorbed'
 
   onTouch: (args...) ->
     console.log 'planet touch', args...
@@ -29,15 +30,25 @@ Q.Sprite.extend "Planet",
 
   draw: (ctx) ->
     @_super(ctx)
-
     ctx.save()
+
     ctx.globalCompositeOperation = 'lighter'
     ctx.beginPath()
     ctx.fillStyle = @team().color(0.25)
-    ctx.arc(0, 0, @asset().width / 2, 0, 180)
+    ctx.arc(0, 0, @radius(), 0, 180)
     ctx.fill()
+
     ctx.restore()
 
-  onAbsorptionTarget: (absorbingTeam) ->
-    console.log 'Absorption!!', absorbingTeam
+  radius: ->
+    @asset().width / 2
+
+  onAbsorptionTargetMet: (absorbingTeam) ->
     @p.team = absorbingTeam
+
+  onAbsorbed: (entity) ->
+    @stage.insert new Q.ShieldFlare
+      x      : @p.x
+      y      : @p.y
+      color  : entity.team().color(0.8)
+      radius : (@radius() + 20 ) * @p.scale

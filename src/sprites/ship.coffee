@@ -23,7 +23,6 @@ Q.Sprite.extend "Ship",
     @add 'absorbable'
 
     @on "hit.sprite", @, 'onCollision'
-    @on "absorbed", @, 'onAbsorbed'
 
   draw: (ctx) ->
     @_super ctx
@@ -127,20 +126,23 @@ Q.Sprite.extend "Ship",
       x: x + ( Q.offsetX( newAngle, dist ) )
       y: y + ( Q.offsetY( newAngle, dist ) )
 
-  onAbsorbed: ->
+  absorb: ->
     @explode()
 
-  explode: ->
+  explode: (color)->
     @stage.insert new Q.Explosion
-      x:  @p.x
-      y:  @p.y
-      vx: @p.vx
-      vy: @p.vy
+      x     : @p.x
+      y     : @p.y
+      vx    : @p.vx
+      vy    : @p.vy
+      radius: @asset().width * 3
+      color : color or @team().color(0.75)
 
     @destroy()
 
   onCollision: (collision) ->
     return if @isTeammate( collision.obj ) or not @isTeamResource( collision.obj )
-    @explode() if collision.obj.isA("Ship")
+    if collision.obj.isA("Ship")
+      @explode(collision.obj.team?().color(0.75))
 
 

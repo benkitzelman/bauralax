@@ -27,6 +27,8 @@ Q.component 'absorber',
 
     @absorbed.push(sprite: sprite, team: sprite.team(), val: @valueFor( sprite ) )
     sprite.absorbable.absorb( @entity )
+    @entity.trigger 'absorption:absorbed', sprite
+
     return unless @absorbedPerc() >= 1
 
     @entity.trigger 'absorption:target-met', @absorber()
