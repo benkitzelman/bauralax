@@ -8,8 +8,6 @@ Q.Sprite.extend 'SelectionBand',
       h      : 4
       radius : 2
 
-    @on 'hit.sprite', @, 'onCollision'
-
   redraw: ({radius, x, y}) ->
     @p.radius = radius
     @p.w      = radius * 2
@@ -30,9 +28,9 @@ Q.Sprite.extend 'SelectionBand',
 
     ctx.restore()
 
-  onCollision: (collision) ->
-    return unless ( ship = collision.obj ).isA("Ship")
-    return unless ship.belongsToPlayer()
-    ship.select()
-
+  isInBounds: (sprite) ->
+    dx   = @p.x - sprite.p.x
+    dy   = @p.y - sprite.p.y
+    rSum = @p.radius + (sprite.asset().width / 2)
+    (dx * dx) + (dy * dy) <= (rSum * rSum)
 

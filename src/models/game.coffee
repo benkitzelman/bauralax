@@ -15,7 +15,7 @@ class Game
     # $.getScript 'http://cdn.html5quintus.com/v0.2.0/quintus-all.js', =>
     console.log 'starting game...'
     @instance = new Game()
-    window.g = @instance
+    window.G  = @instance
 
   constructor: ->
     @Q = window.Q
@@ -26,6 +26,7 @@ class Game
     @Q.clearColor = "#000"
 
     @loadAssets()
+    @playerTeam = Team.RED
 
   loadAssets: ->
     assetList = Game.assets.map( (fileName) -> "/assets/images/#{fileName}" ).join(', ')

@@ -24,11 +24,5 @@ Q.component 'shipBuilder',
 
     coords = @nextCoords()
     ship = new Q.Ship(x: x, y: y, team: team, path: [ coords ])
-    # ship.on 'reached-target', ({item, target}) ->
-    #   ship.off 'reached-target'
-
-    #   ship.moveTo({x, y})
-    #   ship.on 'reached-target', ({item, target}) -> ship.destroy()
-
 
     @entity.stage.insert ship

@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2015-12-20
+/*! bauralux - v1.0.0 - 2015-12-26
 * Copyright (c) 2015  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16446,6 +16446,95 @@ Quintus.UI = function(Q) {
     return Game.start();
   });
 
+  Q.component('absorbable', {
+    absorb: function(absorber) {
+      var base;
+      (typeof (base = this.entity).absorb === "function" ? base.absorb() : void 0) || this.entity.destroy();
+      return this.entity.trigger('absorbed', this.entity, absorber);
+    },
+    value: function() {
+      return this.entity.p.absorptionValue || 1;
+    }
+  });
+
+  Q.component('absorber', {
+    added: function() {
+      this.reset();
+      return this.entity.on("hit.sprite", this, 'onCollision');
+    },
+    absorbableTypes: function() {
+      return this.entity.p.absorbableTypes || ['Ship'];
+    },
+    canBeAbsorbed: function(sprite) {
+      if (this.hasBeenAbsorbed(sprite)) {
+        return false;
+      }
+      return _.any(this.absorbableTypes(), function(type) {
+        return sprite.isA(type) && sprite.absorbable;
+      });
+    },
+    absorber: function() {
+      var ref;
+      return (ref = _.first(this.absorbed)) != null ? ref.team : void 0;
+    },
+    valueFor: function(sprite) {
+      var absorber;
+      absorber = this.absorber();
+      if (!absorber || absorber === sprite.team()) {
+        return sprite.absorbable.value();
+      } else {
+        return sprite.absorbable.value() * -1;
+      }
+    },
+    absorb: function(sprite) {
+      if (!this.canBeAbsorbed(sprite)) {
+        return;
+      }
+      if (this.absorbedPerc() >= 1) {
+        return;
+      }
+      this.absorbed.push({
+        sprite: sprite,
+        team: sprite.team(),
+        val: this.valueFor(sprite)
+      });
+      sprite.absorbable.absorb(this.entity);
+      if (!(this.absorbedPerc() >= 1)) {
+        return;
+      }
+      this.entity.trigger('absorption:target-met', this.absorber());
+      return this.reset();
+    },
+    reset: function() {
+      return this.absorbed = [];
+    },
+    absorptionTarget: function() {
+      return this.entity.p.absorptionTarget || 2;
+    },
+    absorbedValue: function() {
+      return _.reduce(this.absorbed, (function(val, a) {
+        return val += a.val || 0;
+      }), 0);
+    },
+    absorbedPerc: function() {
+      return this.absorbedValue() / this.absorptionTarget();
+    },
+    hasBeenAbsorbed: function(sprite) {
+      return !!_.find(this.absorbed, function(a) {
+        return a.sprite === sprite;
+      });
+    },
+    onCollision: function(collision) {
+      var base;
+      if (collision.obj.isDestroyed) {
+        return;
+      }
+      if (!(typeof (base = this.entity).isTeammate === "function" ? base.isTeammate(collision.obj) : void 0)) {
+        return this.absorb(collision.obj);
+      }
+    }
+  });
+
   Q.component('selectionControls', {
     added: function() {
       var input;
@@ -16461,11 +16550,24 @@ Quintus.UI = function(Q) {
       var current, origin;
       origin = arg.origin, current = arg.current;
       this.selector = this.findOrCreateSelector();
-      return this.selector.redraw({
+      this.selector.redraw({
         radius: Q.distance(origin.p.px, origin.p.py, current.p.px, current.p.py),
         x: origin.p.px,
         y: origin.p.py
       });
+      return this.selectShips();
+    },
+    selectShips: function() {
+      var ref;
+      return _.each((ref = Q.select("Ship")) != null ? ref.items : void 0, (function(_this) {
+        return function(ship) {
+          if (ship.belongsToPlayer() && _this.selector.isInBounds(ship)) {
+            return ship.select();
+          } else {
+            return ship.deselect();
+          }
+        };
+      })(this));
     },
     removeSelection: function() {
       var ref;
@@ -16482,12 +16584,6 @@ Quintus.UI = function(Q) {
       }));
       return selector;
     },
-    deselectAll: function() {
-      var ref;
-      return _.each((ref = Q.select("Ship")) != null ? ref.items : void 0, function(ship) {
-        return ship.deselect();
-      });
-    },
     moveShips: function(arg) {
       var obj, p, ref;
       p = arg.p, obj = arg.obj;
@@ -16499,13 +16595,6 @@ Quintus.UI = function(Q) {
         return ship.deselect();
       });
     }
-  });
-
-  Q.component('shipAbsorber', {
-    added: function() {
-      return this.entity.on("hit.sprite", this, 'onCollision');
-    },
-    onCollision: function() {}
   });
 
   Q.component('shipBuilder', {
@@ -16543,6 +16632,33 @@ Quintus.UI = function(Q) {
     }
   });
 
+  Q.component('teamResource', {
+    added: function() {
+      var entity, fn;
+      entity = this.entity;
+      entity.p.teamResource = true;
+      fn = {
+        team: function() {
+          return entity.p.team || Team.none;
+        },
+        isTeamResource: function(sprite) {
+          return sprite.p.teamResource;
+        },
+        isTeammate: function(sprite) {
+          var team;
+          if (!(team = typeof sprite.team === "function" ? sprite.team() : void 0)) {
+            return false;
+          }
+          return team === fn.team();
+        },
+        belongsToPlayer: function() {
+          return G.playerTeam === this.team();
+        }
+      };
+      return _.extend(entity, fn);
+    }
+  });
+
   Q.component('ttl', {
     added: function() {
       this.startedAt = this.now();
@@ -16570,7 +16686,7 @@ Quintus.UI = function(Q) {
       }
       console.log('starting game...');
       this.instance = new Game();
-      return window.g = this.instance;
+      return window.G = this.instance;
     };
 
     function Game() {
@@ -16579,6 +16695,7 @@ Quintus.UI = function(Q) {
       this.Q.gravityX = 0;
       this.Q.clearColor = "#000";
       this.loadAssets();
+      this.playerTeam = Team.RED;
     }
 
     Game.prototype.loadAssets = function() {
@@ -16908,14 +17025,16 @@ Quintus.UI = function(Q) {
         asset: this.randomAsset(),
         scale: scale,
         team: Team.NONE,
-        type: Q.SPRITE_UI,
+        type: Q.SPRITE_DEFAULT,
         buildRate: 2000,
-        shipEmitDistance: 20
+        shipEmitDistance: 20,
+        absorptionTarget: 20
       }, p));
-      this.add('2d');
+      this.add('teamResource');
       this.add('shipBuilder');
-      this.add('shipAbsorber');
-      return this.on('touch', this, 'onTouch');
+      this.add('absorber');
+      this.on('touch', this, 'onTouch');
+      return this.on('absorption:target-met', this, 'onAbsorptionTarget');
     },
     onTouch: function() {
       var args;
@@ -16934,16 +17053,20 @@ Quintus.UI = function(Q) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
-      ctx.fillStyle = this.p.team.color(0.25);
+      ctx.fillStyle = this.team().color(0.25);
       ctx.arc(0, 0, this.asset().width / 2, 0, 180);
       ctx.fill();
       return ctx.restore();
+    },
+    onAbsorptionTarget: function(absorbingTeam) {
+      console.log('Absorption!!', absorbingTeam);
+      return this.p.team = absorbingTeam;
     }
   });
 
   Q.Sprite.extend('SelectionBand', {
     init: function(p) {
-      this._super(_.defaults(p, {
+      return this._super(_.defaults(p, {
         type: Q.SPRITE_DEFAULT,
         sensor: true,
         asset: '/assets/images/star.png',
@@ -16951,7 +17074,6 @@ Quintus.UI = function(Q) {
         h: 4,
         radius: 2
       }));
-      return this.on('hit.sprite', this, 'onCollision');
     },
     redraw: function(arg) {
       var radius, x, y;
@@ -16972,15 +17094,12 @@ Quintus.UI = function(Q) {
       ctx.fill();
       return ctx.restore();
     },
-    onCollision: function(collision) {
-      var ship;
-      if (!(ship = collision.obj).isA("Ship")) {
-        return;
-      }
-      if (!ship.belongsToPlayer()) {
-        return;
-      }
-      return ship.select();
+    isInBounds: function(sprite) {
+      var dx, dy, rSum;
+      dx = this.p.x - sprite.p.x;
+      dy = this.p.y - sprite.p.y;
+      rSum = this.p.radius + (sprite.asset().width / 2);
+      return (dx * dx) + (dy * dy) <= (rSum * rSum);
     }
   });
 
@@ -17005,7 +17124,10 @@ Quintus.UI = function(Q) {
         this.p.path = new Path(this.p.path);
       }
       this.add('2d');
-      return this.on("hit.sprite", this, 'onCollision');
+      this.add('teamResource');
+      this.add('absorbable');
+      this.on("hit.sprite", this, 'onCollision');
+      return this.on("absorbed", this, 'onAbsorbed');
     },
     draw: function(ctx) {
       this._super(ctx);
@@ -17019,7 +17141,7 @@ Quintus.UI = function(Q) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.save();
       ctx.beginPath();
-      ctx.fillStyle = this.p.team.color(0.75);
+      ctx.fillStyle = this.team().color(0.75);
       ctx.arc(0, 0, this.p.w / 2, 0, 180);
       ctx.fill();
       return ctx.restore();
@@ -17073,12 +17195,6 @@ Quintus.UI = function(Q) {
     moveTo: function(coords) {
       return this.p.path.set([coords]);
     },
-    isTeammate: function(entity) {
-      return entity.p.team === this.p.team;
-    },
-    belongsToPlayer: function() {
-      return true;
-    },
     select: function() {
       return this.p.isSelected = true;
     },
@@ -17121,6 +17237,9 @@ Quintus.UI = function(Q) {
         y: y + (Q.offsetY(newAngle, dist))
       });
     },
+    onAbsorbed: function() {
+      return this.explode();
+    },
     explode: function() {
       this.stage.insert(new Q.Explosion({
         x: this.p.x,
@@ -17131,10 +17250,11 @@ Quintus.UI = function(Q) {
       return this.destroy();
     },
     onCollision: function(collision) {
+      if (this.isTeammate(collision.obj) || !this.isTeamResource(collision.obj)) {
+        return;
+      }
       if (collision.obj.isA("Ship")) {
-        if (!this.isTeammate(collision.obj)) {
-          return this.explode();
-        }
+        return this.explode();
       }
     }
   });
@@ -17184,12 +17304,12 @@ Quintus.UI = function(Q) {
         y: 100,
         team: Team.RED
       }), planetTwo = new Q.Planet({
-        x: 700,
-        y: 500,
+        x: 400,
+        y: 400,
         team: Team.GREEN
       }), planetThree = new Q.Planet({
-        x: 1200,
-        y: 300,
+        x: 500,
+        y: 200,
         team: Team.BLUE
       })
     ];

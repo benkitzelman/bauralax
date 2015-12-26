@@ -7,15 +7,18 @@ Q.Sprite.extend "Planet",
       asset            : @randomAsset()
       scale            : scale
       team             : Team.NONE
-      type             : Q.SPRITE_UI
+      type             : Q.SPRITE_DEFAULT
       buildRate        : 2000
       shipEmitDistance : 20
+      absorptionTarget : 20
     , p
 
-    @add '2d'
+    @add 'teamResource'
     @add 'shipBuilder'
-    @add 'shipAbsorber'
+    @add 'absorber'
+
     @on 'touch', @, 'onTouch'
+    @on 'absorption:target-met', @, 'onAbsorptionTarget'
 
   onTouch: (args...) ->
     console.log 'planet touch', args...
@@ -30,7 +33,11 @@ Q.Sprite.extend "Planet",
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
     ctx.beginPath()
-    ctx.fillStyle = @p.team.color(0.25)
+    ctx.fillStyle = @team().color(0.25)
     ctx.arc(0, 0, @asset().width / 2, 0, 180)
     ctx.fill()
     ctx.restore()
+
+  onAbsorptionTarget: (absorbingTeam) ->
+    console.log 'Absorption!!', absorbingTeam
+    @p.team = absorbingTeam

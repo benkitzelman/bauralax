@@ -19,8 +19,11 @@ Q.Sprite.extend "Ship",
       @p.path = new Path(@p.path)
 
     @add '2d'
+    @add 'teamResource'
+    @add 'absorbable'
 
     @on "hit.sprite", @, 'onCollision'
+    @on "absorbed", @, 'onAbsorbed'
 
   draw: (ctx) ->
     @_super ctx
@@ -33,7 +36,7 @@ Q.Sprite.extend "Ship",
     ctx.save()
 
     ctx.beginPath()
-    ctx.fillStyle = @p.team.color 0.75
+    ctx.fillStyle = @team().color 0.75
     ctx.arc 0, 0, @p.w / 2, 0, 180
     ctx.fill()
 
@@ -85,12 +88,6 @@ Q.Sprite.extend "Ship",
   moveTo: (coords) ->
     @p.path.set [ coords ]
 
-  isTeammate: (entity) ->
-    entity.p.team is @p.team
-
-  belongsToPlayer: ->
-    true
-
   select: ->
     @p.isSelected = true
 
@@ -130,18 +127,20 @@ Q.Sprite.extend "Ship",
       x: x + ( Q.offsetX( newAngle, dist ) )
       y: y + ( Q.offsetY( newAngle, dist ) )
 
+  onAbsorbed: ->
+    @explode()
+
   explode: ->
     @stage.insert new Q.Explosion
       x:  @p.x
       y:  @p.y
       vx: @p.vx
       vy: @p.vy
-      # angle: otherEntity.p.angle - 180
 
     @destroy()
 
   onCollision: (collision) ->
-    if collision.obj.isA("Ship")
-      return @explode() unless @isTeammate( collision.obj )
+    return if @isTeammate( collision.obj ) or not @isTeamResource( collision.obj )
+    @explode() if collision.obj.isA("Ship")
 
 
