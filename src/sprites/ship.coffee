@@ -35,7 +35,7 @@ Q.Sprite.extend "Ship",
     ctx.globalCompositeOperation = 'lighter'
 
     ctx.beginPath()
-    ctx.fillStyle = @team().color 0.15
+    ctx.fillStyle = @teamResource.val().color 0.15
     ctx.arc 0, 0, @p.w / 2, 0, 180
     ctx.fill()
 
@@ -47,7 +47,7 @@ Q.Sprite.extend "Ship",
     ctx.globalCompositeOperation = 'lighter'
 
     ctx.beginPath()
-    ctx.fillStyle = @p.team.color 0.05
+    ctx.fillStyle = @teamResource.val().color 0.05
     ctx.arc 0, 0, @p.w + 10, 0, 180
     ctx.fill()
 
@@ -139,13 +139,13 @@ Q.Sprite.extend "Ship",
       vx    : @p.vx
       vy    : @p.vy
       radius: @asset().width * 3
-      color : color or @team().color(0.75)
+      color : color or @teamResource.val().color(0.75)
 
     @destroy()
 
   onCollision: (collision) ->
-    return if @isTeammate( collision.obj ) or not @isTeamResource( collision.obj )
+    return if @teamResource.isTeammate( collision.obj ) or not @teamResource.isTeamResource( collision.obj )
     if collision.obj.isA("Ship")
-      @explode(collision.obj.team?().color(0.75))
+      @explode(collision.obj.teamResource?().val().color(0.75))
 
 

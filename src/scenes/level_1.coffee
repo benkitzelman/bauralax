@@ -12,7 +12,7 @@ Q.scene "level1", (stage) ->
   stage.add "selectionControls"
 
   Team.GREEN.useStrategy( AggressiveTeam )
-  Team.RED.useStrategy( AggressiveTeam )
+  # Team.RED.useStrategy( AggressiveTeam )
 
   stage.on 'prestep', (dt) ->
     Team.RED.step( dt )

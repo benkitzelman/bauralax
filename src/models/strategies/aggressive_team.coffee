@@ -17,8 +17,8 @@ class AggressiveTeam extends TeamStrategy
     @groupPlanetShips planet
 
   onPlanetLost: ({ planet }) ->
-    planet.off 'shipBuilder:shipBuilt', planet.shipGroup.add
+    planet.off 'shipBuilder:shipBuilt', planet.shipGroup, 'add'
 
   groupPlanetShips: (planet) ->
     planet.shipGroup?.reset() or planet.shipGroup = new ShipGroup()
-    planet.on 'shipBuilder:shipBuilt', planet.shipGroup.add
+    planet.on 'shipBuilder:shipBuilt', planet.shipGroup, 'add'

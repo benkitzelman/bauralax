@@ -1,7 +1,6 @@
 Q.component 'absorber',
   added: ->
     @reset()
-    @entity.on "hit.sprite", @, 'onCollision'
 
   absorbableTypes: ->
     @entity.p.absorbableTypes or [ 'Ship' ]
@@ -16,7 +15,7 @@ Q.component 'absorber',
 
   valueFor: (sprite) ->
     absorber = @absorber()
-    if not absorber or absorber is sprite.team()
+    if not absorber or absorber is sprite.teamResource.val()
       sprite.absorbable.value()
     else
       sprite.absorbable.value() * -1
@@ -25,7 +24,7 @@ Q.component 'absorber',
     return unless @canBeAbsorbed( sprite )
     return if @absorbedPerc() >= 1
 
-    @absorbed.push(sprite: sprite, team: sprite.team(), val: @valueFor( sprite ) )
+    @absorbed.push(sprite: sprite, team: sprite.teamResource.val(), val: @valueFor( sprite ) )
     sprite.absorbable.absorb( @entity )
     @entity.trigger 'absorption:absorbed', sprite
 
@@ -36,6 +35,8 @@ Q.component 'absorber',
 
   reset: ->
     @absorbed = []
+    @entity.off "hit.sprite", @, 'onCollision'
+    @entity.on "hit.sprite", @, 'onCollision'
 
   absorptionTarget: ->
     @entity.p.absorptionTarget or 2
@@ -51,5 +52,5 @@ Q.component 'absorber',
 
   onCollision: (collision) ->
     return if collision.obj.isDestroyed
-    @absorb( collision.obj ) unless @entity.isTeammate?( collision.obj )
+    @absorb( collision.obj ) unless @entity.teamResource?.isTeammate( collision.obj )
 

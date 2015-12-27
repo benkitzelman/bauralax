@@ -6,18 +6,18 @@ class TeamStrategy
     console.warn 'empty strategy'
 
   bindEvents: ->
-    @team.on 'planet-won', @onPlanetWon
-    @team.on 'planet-lost', @onPlanetLost
+    @team.on 'planet-won', @, 'onPlanetWon'
+    @team.on 'planet-lost', @, 'onPlanetLost'
 
   onPlanetWon: (planet) ->
   onPlanetLost: (planet) ->
 
   enemyResources: (type) ->
-    resources = _.select Q.select( type )?.items, (s) => s.team() isnt @team
-    _.groupBy resources, (r) -> r.team()?.name
+    resources = _.select Q.select( type )?.items, (s) => s.teamResource.val() isnt @team
+    _.groupBy resources, (r) -> r.teamResource.val()?.name
 
   teamResources: (team, type) ->
-    _.select Q.select( type )?.items, (s) -> s.team() is team
+    _.select Q.select( type )?.items, (s) -> s.teamResource.val() is team
 
   teamShips    : (team) -> @teamResources( team, "Ship" )
   teamPlanets  : (team) -> @teamResources( team, "Planet" )

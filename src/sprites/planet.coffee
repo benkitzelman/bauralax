@@ -34,7 +34,7 @@ Q.Sprite.extend "Planet",
 
     ctx.globalCompositeOperation = 'lighter'
     ctx.beginPath()
-    ctx.fillStyle = @team().color(0.18)
+    ctx.fillStyle = @teamResource.val().color(0.18)
     ctx.arc(0, 0, @radius(), 0, 180)
     ctx.fill()
 
@@ -44,12 +44,17 @@ Q.Sprite.extend "Planet",
     @asset().width / 2
 
   onAbsorptionTargetMet: (absorbingTeam) ->
-    absorbingTeam.conquorPlanet( @ )
+    reliquishingTeam = @teamResource.val()
+    @teamResource.val absorbingTeam
+
+    reliquishingTeam.trigger 'planet-lost', { planet: @, conquoringTeam: absorbingTeam }
+    absorbingTeam.trigger 'planet-won', { planet: @, reliquishingTeam }
+
     @absorber.reset()
 
   onAbsorbed: (entity) ->
     @stage.insert new Q.ShieldFlare
       x      : @p.x
       y      : @p.y
-      color  : entity.team().color(0.8)
+      color  : entity.teamResource.val().color(0.8)
       radius : (@radius() + 20 ) * @p.scale

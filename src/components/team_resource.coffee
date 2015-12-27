@@ -1,25 +1,20 @@
 Q.component 'teamResource',
 
   added: ->
-    entity = @entity
-    entity.p.teamResource = true
+    @entity.p.isTeamResource = true
 
-    fn =
-      team: ->
-        entity.p.team or Team.none
+  val: (v) ->
+    if v
+      @entity.p.team = v
+    else
+      @entity.p.team or Team.none
 
-      isTeamResource: (sprite) ->
-        sprite.p.teamResource
+  isTeamResource: (sprite) ->
+    sprite.p.isTeamResource
 
-      isTeammate: (sprite) ->
-        return false unless team = sprite.team?()
-        team is fn.team()
+  isTeammate: (sprite) ->
+    return false unless team = sprite.teamResource?.val()
+    team is @val()
 
-      belongsToPlayer: ->
-        G.playerTeam is @team()
-
-    _.extend entity, fn
-
-
-
-
+  belongsToPlayer: ->
+    G.playerTeam is @val()

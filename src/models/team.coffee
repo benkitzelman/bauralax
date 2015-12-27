@@ -17,10 +17,3 @@ class Team extends Q.Evented
 
   step: (dt) ->
     @_strategy?.step dt
-
-  conquorPlanet: (planet) ->
-    reliquishingTeam = planet.team()
-    planet.p.team = @
-
-    reliquishingTeam.trigger 'planet-lost', { planet, conquoringTeam: @ }
-    @trigger 'planet-won', { planet, reliquishingTeam }

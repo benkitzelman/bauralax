@@ -3,7 +3,6 @@ class ShipGroup extends Collection
     ships = _.select _.flatten([ ships ]), (s) ->
       s.isA('Ship') and not s.isDestroyed
 
-    debugger
     @bindShipEvents ships
     super ships
 
@@ -30,7 +29,6 @@ class ShipGroup extends Collection
   moveTo: (target) =>
     @state "moving"
     _.each @items, (ship) ->
-      debugger
       ship.moveTo target
 
   reset: =>

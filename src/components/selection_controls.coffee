@@ -18,7 +18,7 @@ Q.component 'selectionControls',
 
   selectShips: ->
     _.each Q.select("Ship")?.items, (ship) =>
-      if ship.belongsToPlayer() and @selector.isInBounds( ship )
+      if ship.teamResource?.belongsToPlayer() and @selector.isInBounds( ship )
         ship.select()
       else
         ship.deselect()

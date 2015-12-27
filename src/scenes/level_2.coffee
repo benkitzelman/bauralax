@@ -5,7 +5,7 @@ Q.scene "level2", (stage) ->
     planetTwo   = new Q.Planet(x: 400, y: 200,  team: Team.GREEN)
     planetTwo   = new Q.Planet(x: 700, y: 350,  team: Team.GREEN)
     planetThree = new Q.Planet(x: 300, y: 400,  team: Team.BLUE)
-    planetThree = new Q.Planet(x: 200, y: 350,  team: Team.BLUE)
+    planetThree = new Q.Planet(x: 100, y: 550,  team: Team.BLUE)
   ]
 
   stage.insert(new Q.Star) for [1..(Q.width * Q.height / 10000)]

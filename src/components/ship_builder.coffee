@@ -20,10 +20,11 @@ Q.component 'shipBuilder',
     y: y + Q.offsetY( @lastAngle, dist )
 
   build: ->
-    { team, x, y } = @entity.p
+    { x, y } = @entity.p
+    team     = @entity.teamResource.val()
 
     coords = @nextCoords()
-    ship = new Q.Ship(x: x, y: y, team: team, path: [ coords ])
+    ship   = new Q.Ship(x: x, y: y, team: team, path: [ coords ])
 
     @entity.stage.insert ship
     @entity.trigger 'shipBuilder:shipBuilt', ship
