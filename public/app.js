@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2015-12-27
+/*! bauralux - v1.0.0 - 2015-12-28
 * Copyright (c) 2015  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16499,7 +16499,11 @@ Quintus.UI = function(Q) {
         val: this.valueFor(sprite)
       });
       sprite.absorbable.absorb(this.entity);
+      this.updateProgressBar();
       this.entity.trigger('absorption:absorbed', sprite);
+      if (this.absorbedValue() <= 0) {
+        return this.reset();
+      }
       if (!(this.absorbedPerc() >= 1)) {
         return;
       }
@@ -16511,13 +16515,25 @@ Quintus.UI = function(Q) {
       this.entity.off("hit.sprite", this, 'onCollision');
       return this.entity.on("hit.sprite", this, 'onCollision');
     },
+    updateProgressBar: function() {
+      var ref;
+      if (!this._progressBar) {
+        this._progressBar = new Q.ProgressBar({
+          x: this.entity.p.x - (this.entity.asset().width * this.entity.p.scale / 2 + 5 + 30),
+          y: this.entity.p.y - (this.entity.asset().height * this.entity.p.scale / 2)
+        });
+        this.entity.stage.insert(this._progressBar);
+      }
+      return this._progressBar.set(this.absorbedPerc(), (ref = this.absorber()) != null ? ref.color(1) : void 0);
+    },
     absorptionTarget: function() {
       return this.entity.p.absorptionTarget || 2;
     },
     absorbedValue: function() {
-      return _.reduce(this.absorbed, (function(val, a) {
-        return val += a.val || 0;
-      }), 0);
+      return _.reduce(this.absorbed, function(val, a) {
+        val += a.val || 0;
+        return _.max([val, 0]);
+      }, 0);
     },
     absorbedPerc: function() {
       return this.absorbedValue() / this.absorptionTarget();
@@ -17302,7 +17318,7 @@ Quintus.UI = function(Q) {
         type: Q.SPRITE_DEFAULT,
         buildRate: 2000,
         shipEmitDistance: 20,
-        absorptionTarget: 20
+        absorptionTarget: 100
       }, p));
       this.add('teamResource');
       this.add('shipBuilder');
@@ -17357,6 +17373,44 @@ Quintus.UI = function(Q) {
         color: entity.teamResource.val().color(0.8),
         radius: (this.radius() + 20) * this.p.scale
       }));
+    }
+  });
+
+  Q.Sprite.extend('ProgressBar', {
+    init: function(p) {
+      return this._super(_.defaults(p, {
+        asset: '/assets/images/star.png',
+        type: Q.SPRITE_NONE,
+        w: 30,
+        h: 5,
+        strokeWidth: 2,
+        opacity: 1,
+        opacityRate: -.01,
+        color: '#FFFF00'
+      }));
+    },
+    set: function(progress, color) {
+      this.p.progress = progress;
+      this.p.color = color;
+      return this.p.opacity = 1;
+    },
+    step: function(dt) {
+      if (this.p.opacity >= 0) {
+        return this.p.opacity = _.max([this.p.opacity + this.p.opacityRate, 0]);
+      }
+    },
+    draw: function(ctx) {
+      var offset, width;
+      ctx.save();
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillRect(0, 0, this.p.w, this.p.h);
+      offset = this.p.strokeWidth - 1;
+      width = (this.p.w - this.p.strokeWidth) * (this.p.progress || 0);
+      ctx.fillStyle = this.p.color;
+      ctx.fillRect(offset, offset, width, this.p.h - this.p.strokeWidth);
+      ctx.closePath();
+      return ctx.restore();
     }
   });
 
@@ -17669,6 +17723,8 @@ Quintus.UI = function(Q) {
 
   Q.scene("level2", function(stage) {
     var j, planetOne, planetThree, planetTwo, planets, ref;
+    stage.add("viewport");
+    stage.add("selectionControls");
     planets = [
       planetOne = new Q.Planet({
         x: 200,
@@ -17702,8 +17758,6 @@ Quintus.UI = function(Q) {
     planets.forEach(function(p) {
       return stage.insert(p);
     });
-    stage.add("viewport");
-    stage.add("selectionControls");
     Team.GREEN.useStrategy(AggressiveTeam);
     Team.RED.useStrategy(AggressiveTeam);
     return stage.on('prestep', function(dt) {

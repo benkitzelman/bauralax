@@ -1,4 +1,7 @@
 Q.scene "level2", (stage) ->
+  stage.add "viewport"
+  stage.add "selectionControls"
+
   planets = [
     planetOne   = new Q.Planet(x: 200, y: 100,  team: Team.RED)
     planetOne   = new Q.Planet(x: 600, y: 500,  team: Team.RED)
@@ -11,13 +14,10 @@ Q.scene "level2", (stage) ->
   stage.insert(new Q.Star) for [1..(Q.width * Q.height / 10000)]
   planets.forEach (p) -> stage.insert(p)
 
-  stage.add "viewport"
-  stage.add "selectionControls"
-
-  Team.GREEN.useStrategy( AggressiveTeam )
-  Team.RED.useStrategy( AggressiveTeam )
+  Team.GREEN.useStrategy AggressiveTeam
+  Team.RED.useStrategy AggressiveTeam
 
   stage.on 'prestep', (dt) ->
-    Team.RED.step( dt )
-    Team.GREEN.step( dt )
-    Team.BLUE.step( dt )
+    Team.RED.step dt
+    Team.GREEN.step dt
+    Team.BLUE.step dt

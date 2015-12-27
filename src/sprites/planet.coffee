@@ -10,7 +10,7 @@ Q.Sprite.extend "Planet",
       type             : Q.SPRITE_DEFAULT
       buildRate        : 2000
       shipEmitDistance : 20
-      absorptionTarget : 20
+      absorptionTarget : 100
     , p
 
     @add 'teamResource'

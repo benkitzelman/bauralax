@@ -25,9 +25,11 @@ Q.component 'absorber',
     return if @absorbedPerc() >= 1
 
     @absorbed.push(sprite: sprite, team: sprite.teamResource.val(), val: @valueFor( sprite ) )
-    sprite.absorbable.absorb( @entity )
+    sprite.absorbable.absorb @entity
+    @updateProgressBar()
     @entity.trigger 'absorption:absorbed', sprite
 
+    return @reset() if @absorbedValue() <= 0
     return unless @absorbedPerc() >= 1
 
     @entity.trigger 'absorption:target-met', @absorber()
@@ -38,11 +40,24 @@ Q.component 'absorber',
     @entity.off "hit.sprite", @, 'onCollision'
     @entity.on "hit.sprite", @, 'onCollision'
 
+  updateProgressBar: ->
+    if not @_progressBar
+      @_progressBar = new Q.ProgressBar(
+        x: @entity.p.x - (@entity.asset().width * @entity.p.scale / 2 + 5 + 30),
+        y: @entity.p.y - (@entity.asset().height * @entity.p.scale / 2)
+      )
+      @entity.stage.insert @_progressBar
+
+    @_progressBar.set @absorbedPerc(), @absorber()?.color(1)
+
   absorptionTarget: ->
     @entity.p.absorptionTarget or 2
 
   absorbedValue: ->
-    _.reduce @absorbed, ((val, a) -> val += a.val or 0), 0
+    _.reduce @absorbed, (val, a) ->
+      val += a.val or 0
+      _.max [ val, 0 ]
+    , 0
 
   absorbedPerc: ->
      @absorbedValue() / @absorptionTarget()
