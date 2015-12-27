@@ -4,6 +4,7 @@ class Game
     # "sprites.png"
     "star.png"
     "ship.png"
+    "ship3.png"
     "shieldFlare.png"
     "planet0.png"
     "planet1.png"
@@ -27,11 +28,11 @@ class Game
     @Q.clearColor = "#000"
 
     @loadAssets()
-    @playerTeam = Team.RED
+    @playerTeam = Team.BLUE
 
   loadAssets: ->
     assetList = Game.assets.map( (fileName) -> "/assets/images/#{fileName}" ).join(', ')
     @Q.load assetList, =>
       # Finally, call stageScene to run the game
-      @Q.stageScene "level1"
+      @Q.stageScene "level2"
       Game.started.resolveWith this

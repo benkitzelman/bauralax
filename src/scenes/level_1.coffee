@@ -10,3 +10,11 @@ Q.scene "level1", (stage) ->
 
   stage.add "viewport"
   stage.add "selectionControls"
+
+  Team.GREEN.useStrategy( AggressiveTeam )
+  Team.RED.useStrategy( AggressiveTeam )
+
+  stage.on 'prestep', (dt) ->
+    Team.RED.step( dt )
+    Team.GREEN.step( dt )
+    Team.BLUE.step( dt )

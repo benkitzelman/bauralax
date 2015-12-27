@@ -21,7 +21,7 @@ module.exports = (grunt) ->
         files:
           'tmp/bauralux.js': [
             './src/modules/*.coffee', './src/index.coffee', './src/components/*.coffee',
-            './src/models/*.coffee', './src/sprites/*.coffee', './src/scenes/*.coffee'
+            './src/models/**/*.coffee', './src/sprites/*.coffee', './src/scenes/*.coffee'
           ]
 
     concat:

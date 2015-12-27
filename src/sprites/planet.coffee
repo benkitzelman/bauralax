@@ -44,7 +44,8 @@ Q.Sprite.extend "Planet",
     @asset().width / 2
 
   onAbsorptionTargetMet: (absorbingTeam) ->
-    @p.team = absorbingTeam
+    absorbingTeam.conquorPlanet( @ )
+    @absorber.reset()
 
   onAbsorbed: (entity) ->
     @stage.insert new Q.ShieldFlare

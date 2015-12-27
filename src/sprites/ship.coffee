@@ -9,7 +9,7 @@ Q.Sprite.extend "Ship",
       acceleration : 10
       angle        : 90
       scale        : 0.75
-      opacity      : 0.5
+      opacity      : 1
       lastX        : p.x
       isSelected   : false
       lastY        : p.y
@@ -31,19 +31,20 @@ Q.Sprite.extend "Ship",
     @drawSelectionMarker( ctx ) if @p.isSelected
 
   drawTeamColour: (ctx) ->
-    ctx.globalCompositeOperation = 'lighter'
     ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
 
     ctx.beginPath()
-    ctx.fillStyle = @team().color 0.75
+    ctx.fillStyle = @team().color 0.15
     ctx.arc 0, 0, @p.w / 2, 0, 180
     ctx.fill()
 
     ctx.restore()
 
   drawHaze: (ctx) ->
-    ctx.globalCompositeOperation = 'lighter'
+
     ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
 
     ctx.beginPath()
     ctx.fillStyle = @p.team.color 0.05
@@ -54,8 +55,10 @@ Q.Sprite.extend "Ship",
 
   drawSelectionMarker: (ctx) ->
     radius = 5
+
     ctx.save()
 
+    ctx.globalCompositeOperation = 'lighter'
     ctx.beginPath()
     ctx.arc 0, 0, radius, 0, 180
     ctx.lineWidth = 2

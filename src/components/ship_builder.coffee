@@ -26,3 +26,4 @@ Q.component 'shipBuilder',
     ship = new Q.Ship(x: x, y: y, team: team, path: [ coords ])
 
     @entity.stage.insert ship
+    @entity.trigger 'shipBuilder:shipBuilt', ship
