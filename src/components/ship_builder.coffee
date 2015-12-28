@@ -1,17 +1,20 @@
 Q.component 'shipBuilder',
 
   added: ->
-    @timer = setInterval @build.bind(this), @entity.p.buildRate or 1000
-    # @timer = setTimeout @build.bind(this), @entity.p.buildRate or 1000
+    fn     = if Q.debug then setTimeout else setInterval
+    @timer = fn @build.bind(this), @entity.p.buildRate or 1000
 
   stopBuilding: ->
     clearInterval @timer
 
   nextCoords: ->
+    defaultDistance = =>
+      ( @entity.asset().width * @entity.p.scale / 2 ) + ( 10  * @entity.p.scale )
+
     { x, y } = @entity.p
 
     rotation = @entity.p.shipEmitRotation or 18
-    dist     = @entity.p.shipEmitDistance or (@entity.asset().width / 2 + 10) # hypot
+    dist     = @entity.p.shipEmitDistance or defaultDistance() # hypot
 
     @lastAngle ?= 0
     @lastAngle += rotation

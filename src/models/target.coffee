@@ -1,4 +1,8 @@
 class Target
+  @AIMLESS = 'aimless'
+  @COORDS  = 'coords'
+  @ENTITY  = 'entity'
+
   @parse = (target) ->
     return null unless target
     return target if target instanceof Target
@@ -14,6 +18,10 @@ class Target
     target = if @isEntity() then @obj.p else @obj
     _.pick target, 'x', 'y'
 
+  hasTargeted: (entity) ->
+    return false if @type() is Target.AIMLESS
+    @obj is entity or entity.isInBounds( @coords() )
+
   type: ->
-    return 'entity' if @isEntity()
-    @obj.type or 'coords'
+    return Target.ENTITY if @isEntity()
+    @obj.type or Target.COORDS

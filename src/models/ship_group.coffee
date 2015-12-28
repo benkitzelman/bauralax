@@ -34,6 +34,3 @@ class ShipGroup extends Collection
   reset: =>
     @unbindShipEvents @items
     super
-
-  length: ->
-    @items.length

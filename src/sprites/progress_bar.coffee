@@ -2,7 +2,7 @@ Q.Sprite.extend 'ProgressBar',
   init: (p) ->
     @_super _.defaults p,
       asset       : '/assets/images/star.png'
-      type        : Q.SPRITE_NONE
+      type        : Q.SPRITE_UI
       w           : 30
       h           : 5
       strokeWidth : 2

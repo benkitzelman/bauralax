@@ -2,12 +2,14 @@ class Game
   @assets = [
     # "sprites.json"
     # "sprites.png"
-    "star.png"
-    "ship.png"
-    "ship3.png"
-    "shieldFlare.png"
-    "planet0.png"
-    "planet1.png"
+    "/assets/images/star.png"
+    "/assets/images/ship.png"
+    "/assets/images/ship3.png"
+    "/assets/images/shieldFlare.png"
+    "/assets/images/planet0.png"
+    "/assets/images/planet1.png"
+
+    "/assets/audio/ship_explosion.mp3"
   ]
 
   @start = ->
@@ -31,8 +33,7 @@ class Game
     @playerTeam = Team.BLUE
 
   loadAssets: ->
-    assetList = Game.assets.map( (fileName) -> "/assets/images/#{fileName}" ).join(', ')
-    @Q.load assetList, =>
+    @Q.load Game.assets.join(', '), =>
       # Finally, call stageScene to run the game
       @Q.stageScene "level2"
       Game.started.resolveWith this

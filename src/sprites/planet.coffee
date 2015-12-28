@@ -9,20 +9,15 @@ Q.Sprite.extend "Planet",
       team             : Team.NONE
       type             : Q.SPRITE_DEFAULT
       buildRate        : 2000
-      shipEmitDistance : 20
-      absorptionTarget : 100
+      absorptionTarget : 50
     , p
 
     @add 'teamResource'
     @add 'shipBuilder'
     @add 'absorber'
 
-    @on 'touch', @, 'onTouch'
     @on 'absorption:target-met', @, 'onAbsorptionTargetMet'
     @on 'absorption:absorbed', @, 'onAbsorbed'
-
-  onTouch: (args...) ->
-    console.log 'planet touch', args...
 
   randomAsset: ->
     assets = [0..1].map (i) -> "/assets/images/planet#{i}.png"
@@ -42,6 +37,16 @@ Q.Sprite.extend "Planet",
 
   radius: ->
     @asset().width / 2
+
+  isInBounds: (entityOrCoords) ->
+    {x, y} = Target.parse( entityOrCoords )?.coords()
+    return false unless x? and y?
+
+    radius = @asset().width * @p.scale / 2
+    dx     = @p.x - x
+    dy     = @p.y - y
+    rSum   = radius + 1
+    (dx * dx) + (dy * dy) <= (rSum * rSum)
 
   onAbsorptionTargetMet: (absorbingTeam) ->
     reliquishingTeam = @teamResource.val()

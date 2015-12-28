@@ -16438,7 +16438,7 @@ Quintus.UI = function(Q) {
 
   window.Q = Quintus({
     development: true
-  }).include("Sprites, Math, Scenes, Input, 2D, Touch, UI").setup({
+  }).include("Sprites, Math, Scenes, Input, 2D, Touch, UI, Audio").setup({
     maximize: true,
     scaleToFit: true
   }).touch();
@@ -16544,11 +16544,30 @@ Quintus.UI = function(Q) {
       });
     },
     onCollision: function(collision) {
-      var ref;
+      var isEnemy, isReclaimable, isReclaimingShip;
+      isReclaimingShip = (function(_this) {
+        return function() {
+          return collision.obj.isA("Ship") && _this.entity.teamResource.isTeammate(collision.obj) && collision.obj.currentTarget().hasTargeted(_this.entity);
+        };
+      })(this);
+      isReclaimable = (function(_this) {
+        return function() {
+          return _this.absorber() && _this.entity.teamResource.val() !== _this.absorber();
+        };
+      })(this);
+      isEnemy = (function(_this) {
+        return function() {
+          var ref;
+          return !((ref = _this.entity.teamResource) != null ? ref.isTeammate(collision.obj) : void 0);
+        };
+      })(this);
       if (collision.obj.isDestroyed) {
         return;
       }
-      if (!((ref = this.entity.teamResource) != null ? ref.isTeammate(collision.obj) : void 0)) {
+      if (isEnemy()) {
+        return this.absorb(collision.obj);
+      }
+      if (isReclaimingShip() && isReclaimable()) {
         return this.absorb(collision.obj);
       }
     }
@@ -16604,31 +16623,43 @@ Quintus.UI = function(Q) {
       }));
       return selector;
     },
-    moveShips: function(arg) {
-      var obj, p, ref;
-      p = arg.p, obj = arg.obj;
-      return _.each((ref = Q.select("Ship")) != null ? ref.items : void 0, function(ship) {
-        if (!ship.isSelected()) {
-          return;
-        }
-        ship.moveTo(p);
-        return ship.deselect();
+    selections: function() {
+      var ref, ships;
+      ships = _.select((ref = Q.select("Ship")) != null ? ref.items : void 0, function(ship) {
+        return ship.isSelected();
       });
+      return new ShipGroup(ships);
+    },
+    moveShips: function(e) {
+      var group;
+      if ((group = this.selections()).isEmpty()) {
+        return;
+      }
+      group.moveTo(e.p);
+      group.invoke('deselect');
+      return group.reset();
     }
   });
 
   Q.component('shipBuilder', {
     added: function() {
-      return this.timer = setInterval(this.build.bind(this), this.entity.p.buildRate || 1000);
+      var fn;
+      fn = Q.debug ? setTimeout : setInterval;
+      return this.timer = fn(this.build.bind(this), this.entity.p.buildRate || 1000);
     },
     stopBuilding: function() {
       return clearInterval(this.timer);
     },
     nextCoords: function() {
-      var dist, ref, rotation, x, y;
+      var defaultDistance, dist, ref, rotation, x, y;
+      defaultDistance = (function(_this) {
+        return function() {
+          return (_this.entity.asset().width * _this.entity.p.scale / 2) + (10 * _this.entity.p.scale);
+        };
+      })(this);
       ref = this.entity.p, x = ref.x, y = ref.y;
       rotation = this.entity.p.shipEmitRotation || 18;
-      dist = this.entity.p.shipEmitDistance || (this.entity.asset().width / 2 + 10);
+      dist = this.entity.p.shipEmitDistance || defaultDistance();
       if (this.lastAngle == null) {
         this.lastAngle = 0;
       }
@@ -16727,12 +16758,29 @@ Quintus.UI = function(Q) {
       return this.items = [];
     };
 
+    Collection.prototype.invoke = function() {
+      var args, fnName;
+      fnName = arguments[0], args = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+      return _.each(this.items, function(i) {
+        var ref;
+        return (ref = i[fnName]) != null ? ref.apply(i, args) : void 0;
+      });
+    };
+
+    Collection.prototype.length = function() {
+      return this.items.length;
+    };
+
+    Collection.prototype.isEmpty = function() {
+      return this.length() === 0;
+    };
+
     return Collection;
 
   })(Q.Evented);
 
   Game = (function() {
-    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planet0.png", "planet1.png"];
+    Game.assets = ["/assets/images/star.png", "/assets/images/ship.png", "/assets/images/ship3.png", "/assets/images/shieldFlare.png", "/assets/images/planet0.png", "/assets/images/planet1.png", "/assets/audio/ship_explosion.mp3"];
 
     Game.start = function() {
       if (this.started == null) {
@@ -16756,11 +16804,7 @@ Quintus.UI = function(Q) {
     }
 
     Game.prototype.loadAssets = function() {
-      var assetList;
-      assetList = Game.assets.map(function(fileName) {
-        return "/assets/images/" + fileName;
-      }).join(', ');
-      return this.Q.load(assetList, (function(_this) {
+      return this.Q.load(Game.assets.join(', '), (function(_this) {
         return function() {
           _this.Q.stageScene("level2");
           return Game.started.resolveWith(_this);
@@ -16912,10 +16956,6 @@ Quintus.UI = function(Q) {
       return ShipGroup.__super__.reset.apply(this, arguments);
     };
 
-    ShipGroup.prototype.length = function() {
-      return this.items.length;
-    };
-
     return ShipGroup;
 
   })(Collection);
@@ -17049,6 +17089,12 @@ Quintus.UI = function(Q) {
   })(TeamStrategy);
 
   Target = (function() {
+    Target.AIMLESS = 'aimless';
+
+    Target.COORDS = 'coords';
+
+    Target.ENTITY = 'entity';
+
     Target.parse = function(target) {
       if (!target) {
         return null;
@@ -17076,11 +17122,18 @@ Quintus.UI = function(Q) {
       return _.pick(target, 'x', 'y');
     };
 
+    Target.prototype.hasTargeted = function(entity) {
+      if (this.type() === Target.AIMLESS) {
+        return false;
+      }
+      return this.obj === entity || entity.isInBounds(this.coords());
+    };
+
     Target.prototype.type = function() {
       if (this.isEntity()) {
-        return 'entity';
+        return Target.ENTITY;
       }
-      return this.obj.type || 'coords';
+      return this.obj.type || Target.COORDS;
     };
 
     return Target;
@@ -17244,7 +17297,7 @@ Quintus.UI = function(Q) {
     init: function(p) {
       this._super(Q._extend({
         asset: '/assets/images/shieldFlare.png',
-        type: Q.SPRITE_NONE,
+        type: Q.SPRITE_PARTICLE,
         color: '#FFFFFF',
         opacity: .5,
         opacityRate: -.03,
@@ -17317,20 +17370,13 @@ Quintus.UI = function(Q) {
         team: Team.NONE,
         type: Q.SPRITE_DEFAULT,
         buildRate: 2000,
-        shipEmitDistance: 20,
-        absorptionTarget: 100
+        absorptionTarget: 50
       }, p));
       this.add('teamResource');
       this.add('shipBuilder');
       this.add('absorber');
-      this.on('touch', this, 'onTouch');
       this.on('absorption:target-met', this, 'onAbsorptionTargetMet');
       return this.on('absorption:absorbed', this, 'onAbsorbed');
-    },
-    onTouch: function() {
-      var args;
-      args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-      return console.log.apply(console, ['planet touch'].concat(slice.call(args)));
     },
     randomAsset: function() {
       var assets;
@@ -17351,6 +17397,18 @@ Quintus.UI = function(Q) {
     },
     radius: function() {
       return this.asset().width / 2;
+    },
+    isInBounds: function(entityOrCoords) {
+      var dx, dy, rSum, radius, ref, ref1, x, y;
+      ref1 = (ref = Target.parse(entityOrCoords)) != null ? ref.coords() : void 0, x = ref1.x, y = ref1.y;
+      if (!((x != null) && (y != null))) {
+        return false;
+      }
+      radius = this.asset().width * this.p.scale / 2;
+      dx = this.p.x - x;
+      dy = this.p.y - y;
+      rSum = radius + 1;
+      return (dx * dx) + (dy * dy) <= (rSum * rSum);
     },
     onAbsorptionTargetMet: function(absorbingTeam) {
       var reliquishingTeam;
@@ -17380,7 +17438,7 @@ Quintus.UI = function(Q) {
     init: function(p) {
       return this._super(_.defaults(p, {
         asset: '/assets/images/star.png',
-        type: Q.SPRITE_NONE,
+        type: Q.SPRITE_UI,
         w: 30,
         h: 5,
         strokeWidth: 2,
@@ -17417,7 +17475,7 @@ Quintus.UI = function(Q) {
   Q.Sprite.extend('SelectionBand', {
     init: function(p) {
       return this._super(_.defaults(p, {
-        type: Q.SPRITE_DEFAULT,
+        type: Q.SPRITE_UI,
         sensor: true,
         asset: '/assets/images/star.png',
         w: 4,
@@ -17457,7 +17515,7 @@ Quintus.UI = function(Q) {
     init: function(p) {
       this._super(Q._extend({
         asset: '/assets/images/shieldFlare.png',
-        type: Q.SPRITE_NONE,
+        type: Q.SPRITE_PARTICLE,
         color: '#FFFFFF',
         opacity: .5,
         opacityRate: -.03,
@@ -17558,6 +17616,13 @@ Quintus.UI = function(Q) {
     currentTarget: function() {
       return this.p.path.current();
     },
+    hasTargeted: function(entity) {
+      var t;
+      if (!(t = this.currentTarget())) {
+        return false;
+      }
+      return t.obj === entity || entity.isInBounds(t.coords());
+    },
     stop: function() {
       return this.p.vx = this.p.vy = 0;
     },
@@ -17621,7 +17686,7 @@ Quintus.UI = function(Q) {
       newAngle = Q.random(0, 360);
       dist = Q.random(2, 8);
       return path.moveToThenResume({
-        type: 'hit',
+        type: Target.AIMLESS,
         x: x + (Q.offsetX(newAngle, dist)),
         y: y + (Q.offsetY(newAngle, dist))
       });
@@ -17638,14 +17703,20 @@ Quintus.UI = function(Q) {
         radius: this.asset().width * 3,
         color: color || this.teamResource.val().color(0.75)
       }));
+      Q.audio.play('/assets/audio/ship_explosion.mp3');
       return this.destroy();
     },
     onCollision: function(collision) {
-      var base;
-      if (this.teamResource.isTeammate(collision.obj) || !this.teamResource.isTeamResource(collision.obj)) {
+      var base, isEnemyShip;
+      isEnemyShip = (function(_this) {
+        return function() {
+          return collision.obj.isA("Ship") && !_this.teamResource.isTeammate(collision.obj);
+        };
+      })(this);
+      if (!this.teamResource.isTeamResource(collision.obj)) {
         return;
       }
-      if (collision.obj.isA("Ship")) {
+      if (isEnemyShip()) {
         return this.explode(typeof (base = collision.obj).teamResource === "function" ? base.teamResource().val().color(0.75) : void 0);
       }
     }
@@ -17658,9 +17729,31 @@ Quintus.UI = function(Q) {
         y: Math.random() * Q.height,
         scale: Math.max(Math.random(), .3),
         asset: '/assets/images/star.png',
-        type: Q.SPRITE_NONE
+        type: Q.SPRITE_PARTICLE
       });
     }
+  });
+
+  Q.scene("debug", function(stage) {
+    var j, planetTwo, planets, ref;
+    planets = [
+      planetTwo = new Q.Planet({
+        x: 500,
+        y: 200,
+        team: Team.BLUE
+      })
+    ];
+    for (j = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? j <= ref : j >= ref; 1 <= ref ? j++ : j--) {
+      stage.insert(new Q.Star);
+    }
+    planets.forEach(function(p) {
+      return stage.insert(p);
+    });
+    stage.add("viewport");
+    stage.add("selectionControls");
+    return stage.on('prestep', function(dt) {
+      return Team.RED.step(dt);
+    });
   });
 
   Q.scene("endGame", function(stage) {

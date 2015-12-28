@@ -70,6 +70,10 @@ Q.Sprite.extend "Ship",
   currentTarget: ->
     @p.path.current()
 
+  hasTargeted: (entity) ->
+    return false unless t = @currentTarget()
+    t.obj is entity or entity.isInBounds( t.coords() )
+
   stop: ->
     @p.vx = @p.vy = 0
 
@@ -125,7 +129,7 @@ Q.Sprite.extend "Ship",
     newAngle = Q.random 0, 360
     dist     = Q.random 2, 8 # hypot
     path.moveToThenResume
-      type: 'hit'
+      type: Target.AIMLESS
       x: x + ( Q.offsetX( newAngle, dist ) )
       y: y + ( Q.offsetY( newAngle, dist ) )
 
@@ -141,11 +145,12 @@ Q.Sprite.extend "Ship",
       radius: @asset().width * 3
       color : color or @teamResource.val().color(0.75)
 
+    Q.audio.play '/assets/audio/ship_explosion.mp3'
     @destroy()
 
   onCollision: (collision) ->
-    return if @teamResource.isTeammate( collision.obj ) or not @teamResource.isTeamResource( collision.obj )
-    if collision.obj.isA("Ship")
-      @explode(collision.obj.teamResource?().val().color(0.75))
+    isEnemyShip = =>
+      collision.obj.isA("Ship") and not @teamResource.isTeammate( collision.obj )
 
-
+    return unless @teamResource.isTeamResource( collision.obj )
+    @explode( collision.obj.teamResource?().val().color(0.75) ) if isEnemyShip()

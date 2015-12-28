@@ -13,3 +13,12 @@ class Collection extends Q.Evented
 
   reset: ->
     @items = []
+
+  invoke: (fnName, args...) ->
+    _.each @items, (i) -> i[fnName]?.apply( i, args )
+
+  length: ->
+    @items.length
+
+  isEmpty: ->
+    @length() is 0

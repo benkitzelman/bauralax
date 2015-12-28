@@ -6,4 +6,4 @@ Q.Sprite.extend 'Star',
       y: Math.random() * Q.height
       scale: Math.max Math.random(), .3
       asset: '/assets/images/star.png'
-      type: Q.SPRITE_NONE
+      type: Q.SPRITE_PARTICLE

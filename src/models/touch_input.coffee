@@ -49,7 +49,6 @@ class TouchInput extends Q.Evented
 
     evt.p.x = evt.p.px
     evt.p.y = evt.p.py
-
     evt.obj = null
     evt
 

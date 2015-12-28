@@ -31,8 +31,13 @@ Q.component 'selectionControls',
     @stage.insert( selector = new Q.SelectionBand(x:0, y:0) )
     selector
 
-  moveShips: ({p, obj}) ->
-    _.each Q.select("Ship")?.items, (ship) ->
-      return unless ship.isSelected()
-      ship.moveTo p
-      ship.deselect()
+  selections: ->
+    ships = _.select Q.select("Ship")?.items, (ship) -> ship.isSelected()
+    new ShipGroup(ships)
+
+  moveShips: (e) ->
+    return if ( group = @selections() ).isEmpty()
+    group.moveTo e.p
+    group.invoke 'deselect'
+    group.reset()
+
