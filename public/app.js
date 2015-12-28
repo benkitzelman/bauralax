@@ -16441,7 +16441,7 @@ Quintus.UI = function(Q) {
   }).include("Sprites, Math, Scenes, Input, 2D, Touch, UI, Audio").setup({
     maximize: true,
     scaleToFit: true
-  }).touch();
+  }).touch().enableSound();
 
   $(document).ready(function() {
     return Game.start();
