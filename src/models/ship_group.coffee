@@ -31,6 +31,20 @@ class ShipGroup extends Collection
     _.each @items, (ship) ->
       ship.moveTo target
 
+  coords: =>
+    allShipCoords = _.pluck @items, 'p'
+
+    min =
+      x: _.min( allShipCoords, 'x' )?.x or 0
+      y: _.min( allShipCoords, 'y' )?.y or 0
+
+    max =
+      x: _.max( allShipCoords, 'x' )?.x or 0
+      y: _.max( allShipCoords, 'y' )?.y or 0
+
+    x: (max.x - min.x) / 2
+    y: (max.y - min.y) / 2
+
   reset: =>
     @unbindShipEvents @items
     super

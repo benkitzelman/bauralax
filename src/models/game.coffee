@@ -30,7 +30,7 @@ class Game
     @Q.clearColor = "#000"
 
     @loadAssets()
-    @playerTeam = Team.BLUE
+    @playerTeam = Team.GREEN
 
   loadAssets: ->
     @Q.load Game.assets.join(', '), =>

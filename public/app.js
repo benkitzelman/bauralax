@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2015-12-28
+/*! bauralux - v1.0.0 - 2015-12-29
 * Copyright (c) 2015  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16645,7 +16645,17 @@ Quintus.UI = function(Q) {
     added: function() {
       var fn;
       fn = Q.debug ? setTimeout : setInterval;
-      return this.timer = fn(this.build.bind(this), this.entity.p.buildRate || 1000);
+      this.timer = fn(this.build.bind(this), this.entity.p.buildRate || 1000);
+      return this.entity.on('inserted', this, 'onInserted');
+    },
+    onInserted: function() {
+      var initialShips, results;
+      initialShips = this.entity.p.startingShipCount || 0;
+      results = [];
+      while (initialShips--) {
+        results.push(this.build());
+      }
+      return results;
     },
     stopBuilding: function() {
       return clearInterval(this.timer);
@@ -16671,8 +16681,10 @@ Quintus.UI = function(Q) {
     },
     build: function() {
       var coords, ref, ship, team, x, y;
+      if ((team = this.entity.teamResource.val()) === Team.NONE) {
+        return;
+      }
       ref = this.entity.p, x = ref.x, y = ref.y;
-      team = this.entity.teamResource.val();
       coords = this.nextCoords();
       ship = new Q.Ship({
         x: x,
@@ -16800,7 +16812,7 @@ Quintus.UI = function(Q) {
       this.Q.gravityX = 0;
       this.Q.clearColor = "#000";
       this.loadAssets();
-      this.playerTeam = Team.BLUE;
+      this.playerTeam = Team.GREEN;
     }
 
     Game.prototype.loadAssets = function() {
@@ -16884,6 +16896,7 @@ Quintus.UI = function(Q) {
 
     function ShipGroup() {
       this.reset = bind(this.reset, this);
+      this.coords = bind(this.coords, this);
       this.moveTo = bind(this.moveTo, this);
       this.unbindShipEvents = bind(this.unbindShipEvents, this);
       this.bindShipEvents = bind(this.bindShipEvents, this);
@@ -16951,6 +16964,23 @@ Quintus.UI = function(Q) {
       });
     };
 
+    ShipGroup.prototype.coords = function() {
+      var allShipCoords, max, min, ref, ref1, ref2, ref3;
+      allShipCoords = _.pluck(this.items, 'p');
+      min = {
+        x: ((ref = _.min(allShipCoords, 'x')) != null ? ref.x : void 0) || 0,
+        y: ((ref1 = _.min(allShipCoords, 'y')) != null ? ref1.y : void 0) || 0
+      };
+      max = {
+        x: ((ref2 = _.max(allShipCoords, 'x')) != null ? ref2.x : void 0) || 0,
+        y: ((ref3 = _.max(allShipCoords, 'y')) != null ? ref3.y : void 0) || 0
+      };
+      return {
+        x: (max.x - min.x) / 2,
+        y: (max.y - min.y) / 2
+      };
+    };
+
     ShipGroup.prototype.reset = function() {
       this.unbindShipEvents(this.items);
       return ShipGroup.__super__.reset.apply(this, arguments);
@@ -16983,7 +17013,8 @@ Quintus.UI = function(Q) {
       var ref, resources;
       resources = _.select((ref = Q.select(type)) != null ? ref.items : void 0, (function(_this) {
         return function(s) {
-          return s.teamResource.val() !== _this.team;
+          var ref1;
+          return (ref1 = s.teamResource.val()) !== _this.team && ref1 !== Team.NONE;
         };
       })(this));
       return _.groupBy(resources, function(r) {
@@ -17027,6 +17058,10 @@ Quintus.UI = function(Q) {
       return this.enemyResources("Planet");
     };
 
+    TeamStrategy.prototype.unoccupiedPlanets = function() {
+      return this.teamResources(Team.NONE, "Planet");
+    };
+
     TeamStrategy.prototype.closestEnemyPlanet = function() {
       var ownPlanet, planets;
       ownPlanet = _.first(this.ownPlanets());
@@ -17034,6 +17069,38 @@ Quintus.UI = function(Q) {
       return _.first(_.sortBy(planets, function(planet) {
         return Q.distance(ownPlanet.p.x, ownPlanet.p.y, planet.p.x, planet.p.y);
       }));
+    };
+
+    TeamStrategy.prototype.closest = function() {
+      var fn, sprites;
+      sprites = [];
+      return fn = {
+        enemyPlanet: (function(_this) {
+          return function() {
+            sprites = _.flatten(_.values(_this.enemyPlanets()));
+            return fn;
+          };
+        })(this),
+        enemyShip: (function(_this) {
+          return function() {
+            sprites = _.flatten(_.values(_this.enemyShips()));
+            return fn;
+          };
+        })(this),
+        unoccupiedPlanet: (function(_this) {
+          return function() {
+            sprites = _this.unoccupiedPlanets();
+            return fn;
+          };
+        })(this),
+        to: function(target) {
+          var ref, x, y;
+          ref = target.coords(), x = ref.x, y = ref.y;
+          return _.min(sprites, function(s) {
+            return Q.distance(x, y, s.p.x, s.p.y);
+          });
+        }
+      };
     };
 
     return TeamStrategy;
@@ -17058,12 +17125,19 @@ Quintus.UI = function(Q) {
           if (!(shipGroup = planet.shipGroup)) {
             return;
           }
-          if (shipGroup.length() >= _this.attackGroupSize) {
-            shipGroup.moveTo(_this.closestEnemyPlanet());
-            return shipGroup.reset();
+          if (!(shipGroup.length() >= _this.attackGroupSize)) {
+            return;
           }
+          shipGroup.moveTo(_this.bestTargetFor(planet));
+          return shipGroup.reset();
         };
       })(this));
+    };
+
+    AggressiveTeam.prototype.bestTargetFor = function(sprite) {
+      var target;
+      target = Target.parse(sprite);
+      return this.closest().unoccupiedPlanet().to(target) || this.closest().enemyPlanet().to(target);
     };
 
     AggressiveTeam.prototype.onPlanetWon = function(arg) {
@@ -17073,9 +17147,14 @@ Quintus.UI = function(Q) {
     };
 
     AggressiveTeam.prototype.onPlanetLost = function(arg) {
-      var planet;
+      var group, planet;
       planet = arg.planet;
-      return planet.off('shipBuilder:shipBuilt', planet.shipGroup, 'add');
+      planet.off('shipBuilder:shipBuilt', planet.shipGroup, 'add');
+      if (this.ownPlanets().length !== 0) {
+        return;
+      }
+      group = new ShipGroup(this.ownShips());
+      return group.moveTo(this.bestTargetFor(group));
     };
 
     AggressiveTeam.prototype.groupPlanetShips = function(planet) {
@@ -17102,6 +17181,7 @@ Quintus.UI = function(Q) {
       if (target instanceof Target) {
         return target;
       }
+      target = (typeof target.coords === "function" ? target.coords() : void 0) || target;
       return new Target(target);
     };
 
@@ -17815,34 +17895,34 @@ Quintus.UI = function(Q) {
   });
 
   Q.scene("level2", function(stage) {
-    var j, planetOne, planetThree, planetTwo, planets, ref;
+    var j, planets, ref;
     stage.add("viewport");
     stage.add("selectionControls");
     planets = [
-      planetOne = new Q.Planet({
+      new Q.Planet({
         x: 200,
         y: 100,
+        startingShipCount: 50,
         team: Team.RED
-      }), planetOne = new Q.Planet({
-        x: 600,
-        y: 500,
-        team: Team.RED
-      }), planetTwo = new Q.Planet({
-        x: 400,
-        y: 200,
-        team: Team.GREEN
-      }), planetTwo = new Q.Planet({
-        x: 700,
-        y: 350,
-        team: Team.GREEN
-      }), planetThree = new Q.Planet({
-        x: 300,
-        y: 400,
-        team: Team.BLUE
-      }), planetThree = new Q.Planet({
+      }), new Q.Planet({
         x: 100,
         y: 550,
+        startingShipCount: 50,
         team: Team.BLUE
+      }), new Q.Planet({
+        x: 700,
+        y: 350,
+        startingShipCount: 50,
+        team: Team.GREEN
+      }), new Q.Planet({
+        x: 400,
+        y: 200
+      }), new Q.Planet({
+        x: 300,
+        y: 400
+      }), new Q.Planet({
+        x: 600,
+        y: 500
       })
     ];
     for (j = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? j <= ref : j >= ref; 1 <= ref ? j++ : j--) {
@@ -17851,7 +17931,7 @@ Quintus.UI = function(Q) {
     planets.forEach(function(p) {
       return stage.insert(p);
     });
-    Team.GREEN.useStrategy(AggressiveTeam);
+    Team.BLUE.useStrategy(AggressiveTeam);
     Team.RED.useStrategy(AggressiveTeam);
     return stage.on('prestep', function(dt) {
       Team.RED.step(dt);

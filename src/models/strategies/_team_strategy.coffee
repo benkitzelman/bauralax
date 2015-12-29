@@ -13,7 +13,7 @@ class TeamStrategy
   onPlanetLost: (planet) ->
 
   enemyResources: (type) ->
-    resources = _.select Q.select( type )?.items, (s) => s.teamResource.val() isnt @team
+    resources = _.select Q.select( type )?.items, (s) => s.teamResource.val() not in [ @team, Team.NONE ]
     _.groupBy resources, (r) -> r.teamResource.val()?.name
 
   teamResources: (team, type) ->
@@ -26,6 +26,7 @@ class TeamStrategy
   ownPlanets   : -> @ownResources( "Planet" )
   enemyShips   : -> @enemyResources( "Ship" )
   enemyPlanets : -> @enemyResources( "Planet" )
+  unoccupiedPlanets: -> @teamResources( Team.NONE, "Planet" )
 
   closestEnemyPlanet: ->
     ownPlanet = _.first @ownPlanets()
@@ -33,4 +34,23 @@ class TeamStrategy
     _.first _.sortBy( planets, (planet) ->
       Q.distance ownPlanet.p.x, ownPlanet.p.y, planet.p.x, planet.p.y
     )
+
+  closest: ->
+    sprites = []
+    fn =
+      enemyPlanet: =>
+        sprites = _.flatten _.values @enemyPlanets()
+        fn
+
+      enemyShip: =>
+        sprites = _.flatten _.values @enemyShips()
+        fn
+
+      unoccupiedPlanet: =>
+        sprites = @unoccupiedPlanets()
+        fn
+
+      to: (target) ->
+        { x, y } = target.coords()
+        _.min sprites, (s) -> Q.distance( x, y, s.p.x, s.p.y )
 

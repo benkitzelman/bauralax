@@ -4,20 +4,27 @@ class AggressiveTeam extends TeamStrategy
     _.each @ownPlanets(), @groupPlanetShips
 
   step: ->
-    # console.log 'STEP', @ownPlanets().length
     @attackGroupSize ?= Q.random 8, 15
     _.each @ownPlanets(), (planet) =>
       return unless shipGroup = planet.shipGroup
+      return unless shipGroup.length() >= @attackGroupSize
 
-      if shipGroup.length() >= @attackGroupSize
-        shipGroup.moveTo @closestEnemyPlanet()
-        shipGroup.reset() # reset to refill
+      shipGroup.moveTo @bestTargetFor( planet )
+      shipGroup.reset() # reset to refill
+
+  bestTargetFor: (sprite) ->
+    target = Target.parse sprite
+    @closest().unoccupiedPlanet().to( target ) or @closest().enemyPlanet().to( target )
 
   onPlanetWon: ({ planet }) ->
     @groupPlanetShips planet
 
   onPlanetLost: ({ planet }) ->
     planet.off 'shipBuilder:shipBuilt', planet.shipGroup, 'add'
+    return unless @ownPlanets().length is 0
+
+    group = new ShipGroup( @ownShips() )
+    group.moveTo @bestTargetFor( group )
 
   groupPlanetShips: (planet) ->
     planet.shipGroup?.reset() or planet.shipGroup = new ShipGroup()

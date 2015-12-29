@@ -3,6 +3,11 @@ Q.component 'shipBuilder',
   added: ->
     fn     = if Q.debug then setTimeout else setInterval
     @timer = fn @build.bind(this), @entity.p.buildRate or 1000
+    @entity.on 'inserted', @, 'onInserted'
+
+  onInserted: ->
+    initialShips = @entity.p.startingShipCount or 0
+    @build() while initialShips--
 
   stopBuilding: ->
     clearInterval @timer
@@ -23,8 +28,9 @@ Q.component 'shipBuilder',
     y: y + Q.offsetY( @lastAngle, dist )
 
   build: ->
+    return if (team = @entity.teamResource.val()) is Team.NONE
+
     { x, y } = @entity.p
-    team     = @entity.teamResource.val()
 
     coords = @nextCoords()
     ship   = new Q.Ship(x: x, y: y, team: team, path: [ coords ])

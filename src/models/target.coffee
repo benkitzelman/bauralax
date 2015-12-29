@@ -6,6 +6,7 @@ class Target
   @parse = (target) ->
     return null unless target
     return target if target instanceof Target
+    target = target.coords?() or target
     new Target target
 
   constructor: (coordsOrEntity = {}) ->
