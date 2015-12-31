@@ -28,13 +28,6 @@ class TeamStrategy
   enemyPlanets : -> @enemyResources( "Planet" )
   unoccupiedPlanets: -> @teamResources( Team.NONE, "Planet" )
 
-  closestEnemyPlanet: ->
-    ownPlanet = _.first @ownPlanets()
-    planets   = _.flatten _.values @enemyPlanets()
-    _.first _.sortBy( planets, (planet) ->
-      Q.distance ownPlanet.p.x, ownPlanet.p.y, planet.p.x, planet.p.y
-    )
-
   closest: ->
     sprites = []
     fn =
@@ -52,5 +45,7 @@ class TeamStrategy
 
       to: (target) ->
         { x, y } = target.coords()
-        _.min sprites, (s) -> Q.distance( x, y, s.p.x, s.p.y )
+        _.first _.sortBy(sprites, (s) ->
+          Q.distance( x, y, s.p.x, s.p.y )
+        )
 
