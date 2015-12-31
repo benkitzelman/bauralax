@@ -15,8 +15,7 @@ Q.Sprite.extend "Ship",
       lastY        : p.y
       path         : new Path
 
-    if @p.path and not (@p.path instanceof Path)
-      @p.path = new Path(@p.path)
+    @p.path = new Path(@p.path) unless (@p.path instanceof Path)
 
     @add '2d'
     @add 'teamResource'
@@ -92,7 +91,11 @@ Q.Sprite.extend "Ship",
     @moveAround()
 
   moveTo: (coords) ->
+    return unless coords
     @p.path.set [ coords ]
+
+  moveNext: (coords) ->
+    @p.path.add coords
 
   select: ->
     @p.isSelected = true
@@ -128,10 +131,13 @@ Q.Sprite.extend "Ship",
 
     newAngle = Q.random 0, 360
     dist     = Q.random 2, 8 # hypot
-    path.moveToThenResume
+    @moveNext
       type: Target.AIMLESS
       x: x + ( Q.offsetX( newAngle, dist ) )
       y: y + ( Q.offsetY( newAngle, dist ) )
+
+  isIdle: ->
+    _.all @p.path.items, (t) -> t.type() is Target.AIMLESS
 
   absorb: ->
     @explode()

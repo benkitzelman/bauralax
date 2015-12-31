@@ -7,7 +7,8 @@ Q.component 'shipBuilder',
 
   onInserted: ->
     initialShips = @entity.p.startingShipCount or 0
-    @build() while initialShips--
+    _.defer =>
+      @build() while initialShips--
 
   stopBuilding: ->
     clearInterval @timer
@@ -32,8 +33,9 @@ Q.component 'shipBuilder',
 
     { x, y } = @entity.p
 
-    coords = @nextCoords()
-    ship   = new Q.Ship(x: x, y: y, team: team, path: [ coords ])
+    coords       = @nextCoords()
+    ship         = new Q.Ship(x: x, y: y, team: team, path: [ coords ])
+    ship.builder = @entity
 
     @entity.stage.insert ship
     @entity.trigger 'shipBuilder:shipBuilt', ship

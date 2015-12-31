@@ -4,7 +4,7 @@ Q.scene "endGame", (stage) ->
   )
 
   button = container.insert new Q.UI.Button( x: 0, y: 0, fill: "#CCCCCC", label: "Play Again" )
-  label  = container.insert new Q.UI.Text(x:10, y: -10 - button.p.h, label: stage.options.label)
+  # label  = container.insert new Q.UI.Text(x:10, y: -10 - button.p.h, label: stage.options.label)
 
   button.on "click", ->
     Q.clearStages()

@@ -19,14 +19,17 @@ class TeamStrategy
   teamResources: (team, type) ->
     _.select Q.select( type )?.items, (s) -> s.teamResource.val() is team
 
-  teamShips    : (team) -> @teamResources( team, "Ship" )
-  teamPlanets  : (team) -> @teamResources( team, "Planet" )
-  ownResources : (type) -> @teamResources( @team, type )
-  ownShips     : -> @ownResources( "Ship" )
-  ownPlanets   : -> @ownResources( "Planet" )
-  enemyShips   : -> @enemyResources( "Ship" )
-  enemyPlanets : -> @enemyResources( "Planet" )
-  unoccupiedPlanets: -> @teamResources( Team.NONE, "Planet" )
+  teamShips         : (team) -> @teamResources( team, "Ship" )
+  teamPlanets       : (team) -> @teamResources( team, "Planet" )
+  ownResources      : (type) -> @teamResources( @team, type )
+  ownShips          : -> @ownResources( "Ship" )
+  ownPlanets        : -> @ownResources( "Planet" )
+  enemyShips        : -> @enemyResources( "Ship" )
+  enemyPlanets      : -> @enemyResources( "Planet" )
+  unoccupiedPlanets : -> @teamResources( Team.NONE, "Planet" )
+  idleShips         : -> _.select @ownShips(), (s) -> s.isIdle()
+  shipsFrom         : (planet) -> _.select @ownShips(), builder: planet
+  idleShipsFrom     : (planet) -> _.select @shipsFrom( planet ), (s) -> s.isIdle()
 
   closest: ->
     sprites = []

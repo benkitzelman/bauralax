@@ -69,7 +69,7 @@ Q.component 'absorber',
     isReclaimingShip = =>
       collision.obj.isA("Ship") and @entity.teamResource.isTeammate( collision.obj ) and collision.obj.currentTarget().hasTargeted( @entity )
 
-    isReclaimable = =>
+    hasAbsorbedOtherTeams = =>
       @absorber() and @entity.teamResource.val() isnt @absorber()
 
     isEnemy = =>
@@ -78,5 +78,5 @@ Q.component 'absorber',
 
     return if collision.obj.isDestroyed
     return @absorb( collision.obj ) if isEnemy()
-    return @absorb( collision.obj ) if isReclaimingShip() and isReclaimable()
+    return @absorb( collision.obj ) if isReclaimingShip() and hasAbsorbedOtherTeams()
 

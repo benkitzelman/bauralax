@@ -27,9 +27,15 @@ class ShipGroup extends Collection
       s.off 'destroyed', @, 'remove'
 
   moveTo: (target) =>
+    return unless target
     @state "moving"
     _.each @items, (ship) ->
       ship.moveTo target
+
+  moveNext: (target) =>
+    return unless target
+    @state "moving"
+    _.each @items, (ship) -> ship.moveNext target
 
   coords: =>
     allShipCoords = _.pluck @items, 'p'

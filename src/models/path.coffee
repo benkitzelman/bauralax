@@ -8,16 +8,16 @@ class Path
 
   add: (target, at) ->
     target = Target.parse target
-    if at then @_path.splice(at, 0, target) else @_path.push( target )
+    if at then @items.splice(at, 0, target) else @items.push( target )
 
   remove: (target) ->
-    @_path = _.without @_path, Target.parse( target )
+    @items = _.without @items, Target.parse( target )
 
   current: ->
-    @_path[0]
+    @items[0]
 
   moveNext: ->
-    @_path.shift()
+    @items.shift()
     @current()
 
   isAvoidingHit: ->
@@ -25,7 +25,7 @@ class Path
 
   moveToThenResume: (target) ->
     @moveNext() if @isAvoidingHit()
-    @_path.unshift Target.parse( target )
+    @items.unshift Target.parse( target )
 
   set: (targets = []) ->
-    @_path = _.map targets, Target.parse
+    @items = _.map targets, Target.parse

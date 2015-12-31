@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2015-12-29
+/*! bauralux - v1.0.0 - 2015-12-31
 * Copyright (c) 2015  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16376,7 +16376,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, Path, ShipGroup, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, Path, ShipGroup, Stage, StageOne, StageTwo, Target, Team, TeamStrategy, TouchInput,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
     slice = [].slice,
@@ -16544,13 +16544,13 @@ Quintus.UI = function(Q) {
       });
     },
     onCollision: function(collision) {
-      var isEnemy, isReclaimable, isReclaimingShip;
+      var hasAbsorbedOtherTeams, isEnemy, isReclaimingShip;
       isReclaimingShip = (function(_this) {
         return function() {
           return collision.obj.isA("Ship") && _this.entity.teamResource.isTeammate(collision.obj) && collision.obj.currentTarget().hasTargeted(_this.entity);
         };
       })(this);
-      isReclaimable = (function(_this) {
+      hasAbsorbedOtherTeams = (function(_this) {
         return function() {
           return _this.absorber() && _this.entity.teamResource.val() !== _this.absorber();
         };
@@ -16567,7 +16567,7 @@ Quintus.UI = function(Q) {
       if (isEnemy()) {
         return this.absorb(collision.obj);
       }
-      if (isReclaimingShip() && isReclaimable()) {
+      if (isReclaimingShip() && hasAbsorbedOtherTeams()) {
         return this.absorb(collision.obj);
       }
     }
@@ -16649,13 +16649,18 @@ Quintus.UI = function(Q) {
       return this.entity.on('inserted', this, 'onInserted');
     },
     onInserted: function() {
-      var initialShips, results;
+      var initialShips;
       initialShips = this.entity.p.startingShipCount || 0;
-      results = [];
-      while (initialShips--) {
-        results.push(this.build());
-      }
-      return results;
+      return _.defer((function(_this) {
+        return function() {
+          var results;
+          results = [];
+          while (initialShips--) {
+            results.push(_this.build());
+          }
+          return results;
+        };
+      })(this));
     },
     stopBuilding: function() {
       return clearInterval(this.timer);
@@ -16692,6 +16697,7 @@ Quintus.UI = function(Q) {
         team: team,
         path: [coords]
       });
+      ship.builder = this.entity;
       this.entity.stage.insert(ship);
       return this.entity.trigger('shipBuilder:shipBuilt', ship);
     }
@@ -16794,6 +16800,8 @@ Quintus.UI = function(Q) {
   Game = (function() {
     Game.assets = ["/assets/images/star.png", "/assets/images/ship.png", "/assets/images/ship3.png", "/assets/images/shieldFlare.png", "/assets/images/planet0.png", "/assets/images/planet1.png", "/assets/audio/ship_explosion.mp3"];
 
+    Game.unitCap = 450;
+
     Game.start = function() {
       if (this.started == null) {
         this.started = new $.Deferred;
@@ -16812,13 +16820,48 @@ Quintus.UI = function(Q) {
       this.Q.gravityX = 0;
       this.Q.clearColor = "#000";
       this.loadAssets();
+      this.currentLevelIdx = 0;
       this.playerTeam = Team.GREEN;
+      this.playerTeam.on('planet-won', this, 'nextStage');
+      this.playerTeam.on('planet-lost', this, 'nextStage');
     }
 
+    Game.prototype.stages = function() {
+      return [StageOne, StageTwo];
+    };
+
+    Game.prototype.nextStage = function() {
+      var hasLost, hasWon, planets, ref, ref1;
+      if (this.currentLevelIdx == null) {
+        this.currentLevelIdx = 0;
+      }
+      planets = function() {
+        var ref;
+        return (ref = Q.select('Planet')) != null ? ref.items : void 0;
+      };
+      hasWon = function() {
+        return _.all(planets(), function(p) {
+          return p.teamResource.belongsToPlayer();
+        });
+      };
+      hasLost = function() {
+        return !_.any(planets(), function(p) {
+          return p.teamResource.belongsToPlayer();
+        });
+      };
+      if (hasWon()) {
+        return (ref = this.stages()[++this.currentLevelIdx]) != null ? ref.load() : void 0;
+      }
+      if (hasLost()) {
+        return (ref1 = this.stages()[this.currentLevelIdx]) != null ? ref1.load() : void 0;
+      }
+    };
+
     Game.prototype.loadAssets = function() {
+      _.invoke(this.stages(), 'register');
       return this.Q.load(Game.assets.join(', '), (function(_this) {
         return function() {
-          _this.Q.stageScene("level2");
+          _.first(_this.stages()).load();
           return Game.started.resolveWith(_this);
         };
       })(this));
@@ -16849,22 +16892,22 @@ Quintus.UI = function(Q) {
     Path.prototype.add = function(target, at) {
       target = Target.parse(target);
       if (at) {
-        return this._path.splice(at, 0, target);
+        return this.items.splice(at, 0, target);
       } else {
-        return this._path.push(target);
+        return this.items.push(target);
       }
     };
 
     Path.prototype.remove = function(target) {
-      return this._path = _.without(this._path, Target.parse(target));
+      return this.items = _.without(this.items, Target.parse(target));
     };
 
     Path.prototype.current = function() {
-      return this._path[0];
+      return this.items[0];
     };
 
     Path.prototype.moveNext = function() {
-      this._path.shift();
+      this.items.shift();
       return this.current();
     };
 
@@ -16877,14 +16920,14 @@ Quintus.UI = function(Q) {
       if (this.isAvoidingHit()) {
         this.moveNext();
       }
-      return this._path.unshift(Target.parse(target));
+      return this.items.unshift(Target.parse(target));
     };
 
     Path.prototype.set = function(targets) {
       if (targets == null) {
         targets = [];
       }
-      return this._path = _.map(targets, Target.parse);
+      return this.items = _.map(targets, Target.parse);
     };
 
     return Path;
@@ -16897,6 +16940,7 @@ Quintus.UI = function(Q) {
     function ShipGroup() {
       this.reset = bind(this.reset, this);
       this.coords = bind(this.coords, this);
+      this.moveNext = bind(this.moveNext, this);
       this.moveTo = bind(this.moveTo, this);
       this.unbindShipEvents = bind(this.unbindShipEvents, this);
       this.bindShipEvents = bind(this.bindShipEvents, this);
@@ -16958,9 +17002,22 @@ Quintus.UI = function(Q) {
     };
 
     ShipGroup.prototype.moveTo = function(target) {
+      if (!target) {
+        return;
+      }
       this.state("moving");
       return _.each(this.items, function(ship) {
         return ship.moveTo(target);
+      });
+    };
+
+    ShipGroup.prototype.moveNext = function(target) {
+      if (!target) {
+        return;
+      }
+      this.state("moving");
+      return _.each(this.items, function(ship) {
+        return ship.moveNext(target);
       });
     };
 
@@ -17062,13 +17119,22 @@ Quintus.UI = function(Q) {
       return this.teamResources(Team.NONE, "Planet");
     };
 
-    TeamStrategy.prototype.closestEnemyPlanet = function() {
-      var ownPlanet, planets;
-      ownPlanet = _.first(this.ownPlanets());
-      planets = _.flatten(_.values(this.enemyPlanets()));
-      return _.first(_.sortBy(planets, function(planet) {
-        return Q.distance(ownPlanet.p.x, ownPlanet.p.y, planet.p.x, planet.p.y);
-      }));
+    TeamStrategy.prototype.idleShips = function() {
+      return _.select(this.ownShips(), function(s) {
+        return s.isIdle();
+      });
+    };
+
+    TeamStrategy.prototype.shipsFrom = function(planet) {
+      return _.select(this.ownShips(), {
+        builder: planet
+      });
+    };
+
+    TeamStrategy.prototype.idleShipsFrom = function(planet) {
+      return _.select(this.shipsFrom(planet), function(s) {
+        return s.isIdle();
+      });
     };
 
     TeamStrategy.prototype.closest = function() {
@@ -17096,9 +17162,9 @@ Quintus.UI = function(Q) {
         to: function(target) {
           var ref, x, y;
           ref = target.coords(), x = ref.x, y = ref.y;
-          return _.min(sprites, function(s) {
+          return _.first(_.sortBy(sprites, function(s) {
             return Q.distance(x, y, s.p.x, s.p.y);
-          });
+          }));
         }
       };
     };
@@ -17111,8 +17177,7 @@ Quintus.UI = function(Q) {
     extend(AggressiveTeam, superClass);
 
     function AggressiveTeam() {
-      AggressiveTeam.__super__.constructor.apply(this, arguments);
-      _.each(this.ownPlanets(), this.groupPlanetShips);
+      return AggressiveTeam.__super__.constructor.apply(this, arguments);
     }
 
     AggressiveTeam.prototype.step = function() {
@@ -17122,16 +17187,18 @@ Quintus.UI = function(Q) {
       return _.each(this.ownPlanets(), (function(_this) {
         return function(planet) {
           var shipGroup;
-          if (!(shipGroup = planet.shipGroup)) {
-            return;
-          }
+          shipGroup = _this.idleShipsFrom(planet);
           if (!(shipGroup.length() >= _this.attackGroupSize)) {
             return;
           }
-          shipGroup.moveTo(_this.bestTargetFor(planet));
+          shipGroup.moveNext(_this.bestTargetFor(planet));
           return shipGroup.reset();
         };
       })(this));
+    };
+
+    AggressiveTeam.prototype.idleShipsFrom = function(planet) {
+      return new ShipGroup(AggressiveTeam.__super__.idleShipsFrom.call(this, planet));
     };
 
     AggressiveTeam.prototype.bestTargetFor = function(sprite) {
@@ -17140,27 +17207,14 @@ Quintus.UI = function(Q) {
       return this.closest().unoccupiedPlanet().to(target) || this.closest().enemyPlanet().to(target);
     };
 
-    AggressiveTeam.prototype.onPlanetWon = function(arg) {
-      var planet;
-      planet = arg.planet;
-      return this.groupPlanetShips(planet);
-    };
-
     AggressiveTeam.prototype.onPlanetLost = function(arg) {
       var group, planet;
       planet = arg.planet;
-      planet.off('shipBuilder:shipBuilt', planet.shipGroup, 'add');
       if (this.ownPlanets().length !== 0) {
         return;
       }
       group = new ShipGroup(this.ownShips());
       return group.moveTo(this.bestTargetFor(group));
-    };
-
-    AggressiveTeam.prototype.groupPlanetShips = function(planet) {
-      var ref;
-      ((ref = planet.shipGroup) != null ? ref.reset() : void 0) || (planet.shipGroup = new ShipGroup());
-      return planet.on('shipBuilder:shipBuilt', planet.shipGroup, 'add');
     };
 
     return AggressiveTeam;
@@ -17647,7 +17701,7 @@ Quintus.UI = function(Q) {
         lastY: p.y,
         path: new Path
       }));
-      if (this.p.path && !(this.p.path instanceof Path)) {
+      if (!(this.p.path instanceof Path)) {
         this.p.path = new Path(this.p.path);
       }
       this.add('2d');
@@ -17727,7 +17781,13 @@ Quintus.UI = function(Q) {
       return this.moveAround();
     },
     moveTo: function(coords) {
+      if (!coords) {
+        return;
+      }
       return this.p.path.set([coords]);
+    },
+    moveNext: function(coords) {
+      return this.p.path.add(coords);
     },
     select: function() {
       return this.p.isSelected = true;
@@ -17765,10 +17825,15 @@ Quintus.UI = function(Q) {
       ref = this.p, x = ref.x, y = ref.y, path = ref.path, angle = ref.angle;
       newAngle = Q.random(0, 360);
       dist = Q.random(2, 8);
-      return path.moveToThenResume({
+      return this.moveNext({
         type: Target.AIMLESS,
         x: x + (Q.offsetX(newAngle, dist)),
         y: y + (Q.offsetY(newAngle, dist))
+      });
+    },
+    isIdle: function() {
+      return _.all(this.p.path.items, function(t) {
+        return t.type() === Target.AIMLESS;
       });
     },
     absorb: function() {
@@ -17814,6 +17879,83 @@ Quintus.UI = function(Q) {
     }
   });
 
+  Stage = (function() {
+    Stage.register = function(cb) {
+      if (this.instance) {
+        return;
+      }
+      return Q.scene(this.name, (function(_this) {
+        return function(qStage) {
+          _this.instance = new _this(qStage);
+          return typeof cb === "function" ? cb(stage) : void 0;
+        };
+      })(this));
+    };
+
+    Stage.load = function() {
+      return Q.stageScene(this.name);
+    };
+
+    function Stage(QStage) {
+      this.QStage = QStage;
+      this.setupStage();
+      this.applyStrategy();
+      this.addBackground();
+      this.addPlanets();
+    }
+
+    Stage.prototype.setupStage = function() {
+      this.QStage.add("viewport");
+      return this.QStage.add("selectionControls");
+    };
+
+    Stage.prototype.addBackground = function() {
+      var j, ref, results;
+      results = [];
+      for (j = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? j <= ref : j >= ref; 1 <= ref ? j++ : j--) {
+        results.push(this.QStage.insert(new Q.Star));
+      }
+      return results;
+    };
+
+    Stage.prototype.addPlanets = function() {
+      var j, len, p, ref, results;
+      ref = this.planets;
+      results = [];
+      for (j = 0, len = ref.length; j < len; j++) {
+        p = ref[j];
+        results.push(this.QStage.insert(new Q.Planet(p)));
+      }
+      return results;
+    };
+
+    Stage.prototype.applyStrategy = function() {
+      var conf, ref, ref1, teamName;
+      ref = this.enemyStrategem || {};
+      for (teamName in ref) {
+        conf = ref[teamName];
+        if ((ref1 = Team[teamName]) != null) {
+          ref1.useStrategy(conf.strategy);
+        }
+      }
+      return this.QStage.on('prestep', (function(_this) {
+        return function(dt) {
+          var ref2, results;
+          ref2 = _this.enemyStrategem || {};
+          results = [];
+          for (teamName in ref2) {
+            conf = ref2[teamName];
+            results.push(Team[teamName].step(dt));
+          }
+          return results;
+        };
+      })(this));
+    };
+
+    return Stage;
+
+  })();
+
   Q.scene("debug", function(stage) {
     var j, planetTwo, planets, ref;
     planets = [
@@ -17837,7 +17979,7 @@ Quintus.UI = function(Q) {
   });
 
   Q.scene("endGame", function(stage) {
-    var button, container, label;
+    var button, container;
     container = stage.insert(new Q.UI.Container({
       x: Q.width / 2,
       y: Q.height / 2,
@@ -17849,11 +17991,6 @@ Quintus.UI = function(Q) {
       fill: "#CCCCCC",
       label: "Play Again"
     }));
-    label = container.insert(new Q.UI.Text({
-      x: 10,
-      y: -10 - button.p.h,
-      label: stage.options.label
-    }));
     button.on("click", function() {
       Q.clearStages();
       return Q.stageScene('level1');
@@ -17861,83 +17998,91 @@ Quintus.UI = function(Q) {
     return container.fit(20);
   });
 
-  Q.scene("level1", function(stage) {
-    var j, planetOne, planetThree, planetTwo, planets, ref;
-    planets = [
-      planetOne = new Q.Planet({
+  StageOne = (function(superClass) {
+    extend(StageOne, superClass);
+
+    function StageOne() {
+      return StageOne.__super__.constructor.apply(this, arguments);
+    }
+
+    StageOne.prototype.planets = [
+      {
         x: 300,
         y: 100,
+        startingShipCount: 50,
         team: Team.RED
-      }), planetTwo = new Q.Planet({
-        x: 400,
-        y: 400,
-        team: Team.GREEN
-      }), planetThree = new Q.Planet({
+      }, {
         x: 500,
         y: 200,
+        startingShipCount: 50,
         team: Team.BLUE
-      })
+      }, {
+        x: 400,
+        y: 400,
+        startingShipCount: 50,
+        team: Team.GREEN
+      }
     ];
-    for (j = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? j <= ref : j >= ref; 1 <= ref ? j++ : j--) {
-      stage.insert(new Q.Star);
-    }
-    planets.forEach(function(p) {
-      return stage.insert(p);
-    });
-    stage.add("viewport");
-    stage.add("selectionControls");
-    Team.GREEN.useStrategy(AggressiveTeam);
-    return stage.on('prestep', function(dt) {
-      Team.RED.step(dt);
-      Team.GREEN.step(dt);
-      return Team.BLUE.step(dt);
-    });
-  });
 
-  Q.scene("level2", function(stage) {
-    var j, planets, ref;
-    stage.add("viewport");
-    stage.add("selectionControls");
-    planets = [
-      new Q.Planet({
+    StageOne.prototype.enemyStrategem = {
+      RED: {
+        strategy: AggressiveTeam
+      },
+      BLUE: {
+        strategy: AggressiveTeam
+      }
+    };
+
+    return StageOne;
+
+  })(Stage);
+
+  StageTwo = (function(superClass) {
+    extend(StageTwo, superClass);
+
+    function StageTwo() {
+      return StageTwo.__super__.constructor.apply(this, arguments);
+    }
+
+    StageTwo.prototype.planets = [
+      {
         x: 200,
         y: 100,
         startingShipCount: 50,
         team: Team.RED
-      }), new Q.Planet({
+      }, {
         x: 100,
         y: 550,
         startingShipCount: 50,
         team: Team.BLUE
-      }), new Q.Planet({
+      }, {
         x: 700,
         y: 350,
         startingShipCount: 50,
         team: Team.GREEN
-      }), new Q.Planet({
+      }, {
         x: 400,
         y: 200
-      }), new Q.Planet({
+      }, {
         x: 300,
         y: 400
-      }), new Q.Planet({
+      }, {
         x: 600,
         y: 500
-      })
+      }
     ];
-    for (j = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? j <= ref : j >= ref; 1 <= ref ? j++ : j--) {
-      stage.insert(new Q.Star);
-    }
-    planets.forEach(function(p) {
-      return stage.insert(p);
-    });
-    Team.BLUE.useStrategy(AggressiveTeam);
-    Team.RED.useStrategy(AggressiveTeam);
-    return stage.on('prestep', function(dt) {
-      Team.RED.step(dt);
-      Team.GREEN.step(dt);
-      return Team.BLUE.step(dt);
-    });
-  });
+
+    StageTwo.prototype.enemyStrategem = {
+      RED: {
+        strategy: AggressiveTeam
+      },
+      BLUE: {
+        strategy: AggressiveTeam
+      }
+    };
+
+    return StageTwo;
+
+  })(Stage);
 
 }).call(this);

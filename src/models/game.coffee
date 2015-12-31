@@ -12,6 +12,8 @@ class Game
     "/assets/audio/ship_explosion.mp3"
   ]
 
+  @unitCap: 450
+
   @start = ->
     @started ?= new $.Deferred
     return if @started.state() is 'resolved'
@@ -30,10 +32,40 @@ class Game
     @Q.clearColor = "#000"
 
     @loadAssets()
-    @playerTeam = Team.GREEN
+
+    @currentLevelIdx = 0
+    @playerTeam      = Team.GREEN
+
+    @playerTeam.on 'planet-won',  @, 'nextStage'
+    @playerTeam.on 'planet-lost', @, 'nextStage'
+
+  stages: ->
+    [
+      StageOne
+      StageTwo
+      # 'level2'
+      # 'endGame'
+    ]
+
+  nextStage: ->
+    @currentLevelIdx ?= 0
+
+    planets = ->
+      Q.select('Planet')?.items
+
+    hasWon = ->
+      _.all planets(), (p) -> p.teamResource.belongsToPlayer()
+
+    hasLost = ->
+      not _.any planets(), (p) -> p.teamResource.belongsToPlayer()
+
+    return @stages()[ ++@currentLevelIdx ]?.load() if hasWon()
+    return @stages()[ @currentLevelIdx ]?.load() if hasLost()
 
   loadAssets: ->
+    _.invoke @stages(), 'register'
+
     @Q.load Game.assets.join(', '), =>
       # Finally, call stageScene to run the game
-      @Q.stageScene "level2"
+      _.first( @stages() ).load()
       Game.started.resolveWith this
