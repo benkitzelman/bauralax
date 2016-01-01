@@ -1,5 +1,5 @@
-/*! bauralux - v1.0.0 - 2015-12-31
-* Copyright (c) 2015  *//*!
+/*! bauralux - v1.0.0 - 2016-01-01
+* Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
  *
@@ -16376,7 +16376,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, Path, ShipGroup, Stage, StageOne, StageTwo, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, Path, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
     slice = [].slice,
@@ -16646,7 +16646,8 @@ Quintus.UI = function(Q) {
       var fn;
       fn = Q.debug ? setTimeout : setInterval;
       this.timer = fn(this.build.bind(this), this.entity.p.buildRate || 1000);
-      return this.entity.on('inserted', this, 'onInserted');
+      this.entity.on('inserted', this, 'onInserted');
+      return this.entity.on('destroyed', this, 'stopBuilding');
     },
     onInserted: function() {
       var initialShips;
@@ -16822,19 +16823,33 @@ Quintus.UI = function(Q) {
       this.loadAssets();
       this.currentLevelIdx = 0;
       this.playerTeam = Team.GREEN;
-      this.playerTeam.on('planet-won', this, 'nextStage');
-      this.playerTeam.on('planet-lost', this, 'nextStage');
+      this.playerTeam.on('planet-won', this, 'winLoseOrContinue');
+      this.playerTeam.on('planet-lost', this, 'winLoseOrContinue');
     }
 
     Game.prototype.stages = function() {
-      return [StageOne, StageTwo];
+      return [StageDebug, StageOne, StageTwo];
+    };
+
+    Game.prototype.isLastStage = function() {
+      return this.stages()[this.currentLevelIdx + 1] != null;
     };
 
     Game.prototype.nextStage = function() {
-      var hasLost, hasWon, planets, ref, ref1;
+      var ref;
       if (this.currentLevelIdx == null) {
         this.currentLevelIdx = 0;
       }
+      return (ref = this.stages()[++this.currentLevelIdx]) != null ? ref.load() : void 0;
+    };
+
+    Game.prototype.currentStage = function() {
+      var ref;
+      return (ref = this.stages()[this.currentLevelIdx]) != null ? ref.instance : void 0;
+    };
+
+    Game.prototype.winLoseOrContinue = function() {
+      var hasLost, hasWon, planets;
       planets = function() {
         var ref;
         return (ref = Q.select('Planet')) != null ? ref.items : void 0;
@@ -16845,15 +16860,15 @@ Quintus.UI = function(Q) {
         });
       };
       hasLost = function() {
-        return !_.any(planets(), function(p) {
-          return p.teamResource.belongsToPlayer();
+        return _.all(planets(), function(p) {
+          return !p.teamResource.belongsToPlayer();
         });
       };
       if (hasWon()) {
-        return (ref = this.stages()[++this.currentLevelIdx]) != null ? ref.load() : void 0;
+        return this.currentStage().transitionTo(StageWonGame);
       }
       if (hasLost()) {
-        return (ref1 = this.stages()[this.currentLevelIdx]) != null ? ref1.load() : void 0;
+        return this.currentStage().transitionTo(StageLostGame);
       }
     };
 
@@ -16861,10 +16876,19 @@ Quintus.UI = function(Q) {
       _.invoke(this.stages(), 'register');
       return this.Q.load(Game.assets.join(', '), (function(_this) {
         return function() {
-          _.first(_this.stages()).load();
+          _this.startingStage();
           return Game.started.resolveWith(_this);
         };
       })(this));
+    };
+
+    Game.prototype.startingStage = function() {
+      Q.clearStages();
+      return _.first(this.stages()).load();
+    };
+
+    Game.prototype.replayLastStage = function() {
+      return this.stages()[this.currentLevelIdx].load();
     };
 
     return Game;
@@ -17181,18 +17205,20 @@ Quintus.UI = function(Q) {
     }
 
     AggressiveTeam.prototype.step = function() {
-      if (this.attackGroupSize == null) {
-        this.attackGroupSize = Q.random(8, 15);
+      var base;
+      if ((base = this.team).attackGroupSize == null) {
+        base.attackGroupSize = Q.random(8, 65);
       }
       return _.each(this.ownPlanets(), (function(_this) {
         return function(planet) {
           var shipGroup;
           shipGroup = _this.idleShipsFrom(planet);
-          if (!(shipGroup.length() >= _this.attackGroupSize)) {
+          if (!(shipGroup.length() >= _this.team.attackGroupSize)) {
             return;
           }
           shipGroup.moveNext(_this.bestTargetFor(planet));
-          return shipGroup.reset();
+          shipGroup.reset();
+          return delete _this.team.attackGroupSize;
         };
       })(this));
     };
@@ -17373,10 +17399,22 @@ Quintus.UI = function(Q) {
     };
 
     TouchInput.prototype.normalize = function(touch, stage) {
-      var canvasX, canvasY, evt;
+      var canvasX, canvasY, el, evt;
       stage = stage || this.stage;
-      canvasX = touch.offsetX || touch.layerX || (touch.pageX - Q.touch.offsetX);
-      canvasY = touch.offsetY || touch.layerY || (touch.pageY - Q.touch.offsetY);
+      canvasX = touch.offsetX || touch.layerX;
+      canvasY = touch.offsetY || touch.layerY;
+      if (!canvasY || !canvasX) {
+        if (!Q.touch.offsetX) {
+          el = Q.el;
+          Q.touch.offsetX = Q.touch.offsetY = 0;
+          while (el = el.offsetParent) {
+            Q.touch.offsetX += el.offsetLeft;
+            Q.touch.offsetY += el.offsetTop;
+          }
+        }
+        canvasX = touch.pageX - Q.touch.offsetX;
+        canvasY = touch.pageY - Q.touch.offsetY;
+      }
       evt = new Q.Evented();
       evt.grid = {};
       evt.p = {
@@ -17400,26 +17438,32 @@ Quintus.UI = function(Q) {
     };
 
     TouchInput.prototype.onTouch = function(e) {
-      this.activeTouch = this.normalize(e);
+      var touch;
+      touch = _.first(e.changedTouches || [e]);
+      touch.identifier = touch.identifier || 0;
+      this.activeTouch = this.normalize(touch);
       return this.trigger('touch-start', this.activeTouch);
     };
 
     TouchInput.prototype.onTouchEnd = function(e) {
-      var evtName;
+      var evtName, touch;
+      touch = _.first(e.changedTouches || [e]);
       evtName = this.state === 'selecting' ? 'touch-drag-end' : 'touch';
-      this.trigger(evtName, this.activeTouch, this.normalize(e));
+      this.trigger(evtName, this.activeTouch, this.normalize(touch));
       this.state = 'waiting';
       return delete this.activeTouch;
     };
 
     TouchInput.prototype.onDrag = function(e) {
+      var touch;
       if (!this.activeTouch) {
         return;
       }
       this.state = 'selecting';
+      touch = _.first(e.changedTouches || [e]);
       return this.trigger('touch-drag-change', {
         origin: this.activeTouch,
-        current: this.normalize(e)
+        current: this.normalize(touch)
       });
     };
 
@@ -17712,7 +17756,6 @@ Quintus.UI = function(Q) {
     draw: function(ctx) {
       this._super(ctx);
       this.drawTeamColour(ctx);
-      this.drawHaze(ctx);
       if (this.p.isSelected) {
         return this.drawSelectionMarker(ctx);
       }
@@ -17952,51 +17995,107 @@ Quintus.UI = function(Q) {
       })(this));
     };
 
+    Stage.prototype.transitionTo = function(Stage) {
+      var fadeables;
+      fadeables = Q.select('Planet').items.concat(Q.select('Star').items);
+      return this.QStage.on('step', (function(_this) {
+        return function(dt) {
+          _.each(fadeables, function(sprite) {
+            return sprite.p.opacity = _.max([0, sprite.p.opacity - 0.02]);
+          });
+          if (!_.all(fadeables, function(sprite) {
+            return sprite.p.opacity === 0;
+          })) {
+            return;
+          }
+          _.invoke(fadeables, 'destroy');
+          _.each(Q.select('Ship').items, function(ship) {
+            return _.delay((function() {
+              return ship.explode();
+            }), Q.random(0, 500));
+          });
+          _this.QStage.off('step');
+          return _.delay((function() {
+            return Stage.load();
+          }), 1000);
+        };
+      })(this));
+    };
+
     return Stage;
 
   })();
 
-  Q.scene("debug", function(stage) {
-    var j, planetTwo, planets, ref;
-    planets = [
-      planetTwo = new Q.Planet({
+  StageDebug = (function(superClass) {
+    extend(StageDebug, superClass);
+
+    function StageDebug() {
+      return StageDebug.__super__.constructor.apply(this, arguments);
+    }
+
+    StageDebug.prototype.planets = [
+      {
         x: 500,
         y: 200,
+        startingShipCount: 0,
         team: Team.BLUE
-      })
+      }, {
+        x: 500,
+        y: 400,
+        startingShipCount: 50,
+        team: Team.GREEN
+      }
     ];
-    for (j = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? j <= ref : j >= ref; 1 <= ref ? j++ : j--) {
-      stage.insert(new Q.Star);
-    }
-    planets.forEach(function(p) {
-      return stage.insert(p);
-    });
-    stage.add("viewport");
-    stage.add("selectionControls");
-    return stage.on('prestep', function(dt) {
-      return Team.RED.step(dt);
-    });
-  });
 
-  Q.scene("endGame", function(stage) {
-    var button, container;
-    container = stage.insert(new Q.UI.Container({
-      x: Q.width / 2,
-      y: Q.height / 2,
-      fill: "rgba(0,0,0,0.5)"
-    }));
-    button = container.insert(new Q.UI.Button({
-      x: 0,
-      y: 0,
-      fill: "#CCCCCC",
-      label: "Play Again"
-    }));
-    button.on("click", function() {
-      Q.clearStages();
-      return Q.stageScene('level1');
-    });
-    return container.fit(20);
-  });
+    StageDebug.prototype.enemyStrategem = {
+      BLUE: {
+        strategy: AggressiveTeam
+      }
+    };
+
+    return StageDebug;
+
+  })(Stage);
+
+  StageLostGame = (function(superClass) {
+    extend(StageLostGame, superClass);
+
+    StageLostGame.register();
+
+    function StageLostGame(QStage) {
+      var button, label;
+      this.QStage = QStage;
+      this.setupStage();
+      this.container = this.QStage.insert(new Q.UI.Container({
+        x: Q.width / 2,
+        y: Q.height / 2,
+        fill: "rgba(0,0,0,0.5)"
+      }));
+      label = new Q.UI.Text({
+        x: 0,
+        y: 0,
+        color: "#CCCCCC",
+        label: "You Lost"
+      });
+      button = new Q.UI.Button({
+        x: 0,
+        y: 50,
+        fill: "#CCCCCC",
+        label: "Try Again"
+      });
+      button.on("click", this, 'onTryAgain');
+      this.container.insert(label);
+      this.container.insert(button);
+      this.container.fit(50);
+    }
+
+    StageLostGame.prototype.onTryAgain = function() {
+      return Game.instance.startingStage();
+    };
+
+    return StageLostGame;
+
+  })(Stage);
 
   StageOne = (function(superClass) {
     extend(StageOne, superClass);
@@ -18007,18 +18106,22 @@ Quintus.UI = function(Q) {
 
     StageOne.prototype.planets = [
       {
-        x: 300,
-        y: 100,
+        x: 200,
+        y: 150,
         startingShipCount: 50,
         team: Team.RED
       }, {
         x: 500,
-        y: 200,
+        y: 150,
         startingShipCount: 50,
         team: Team.BLUE
       }, {
-        x: 400,
-        y: 400,
+        x: 350,
+        y: 350,
+        team: Team.NONE
+      }, {
+        x: 350,
+        y: 550,
         startingShipCount: 50,
         team: Team.GREEN
       }
@@ -18082,6 +18185,60 @@ Quintus.UI = function(Q) {
     };
 
     return StageTwo;
+
+  })(Stage);
+
+  StageWonGame = (function(superClass) {
+    extend(StageWonGame, superClass);
+
+    StageWonGame.register();
+
+    function StageWonGame(QStage) {
+      var againBtn, label, nextBtn;
+      this.QStage = QStage;
+      this.setupStage();
+      this.container = this.QStage.insert(new Q.UI.Container({
+        x: Q.width / 2,
+        y: Q.height / 2,
+        fill: "rgba(0,0,0,0.5)"
+      }));
+      label = new Q.UI.Text({
+        x: 0,
+        y: 0,
+        color: "#CCCCCC",
+        label: "You Won!"
+      });
+      nextBtn = new Q.UI.Button({
+        x: 0,
+        y: 50,
+        fill: "#CCCCCC",
+        label: "Next Level"
+      });
+      nextBtn.on("click", this, 'onNextLevel');
+      this.container.insert(label);
+      this.container.insert(nextBtn);
+      if (!Game.instance.isLastStage()) {
+        againBtn = new Q.UI.Button({
+          x: 0,
+          y: 100,
+          fill: "#CCCCCC",
+          label: "Play Again"
+        });
+        againBtn.on("click", this, 'onPlayAgain');
+        this.container.insert(againBtn);
+      }
+      this.container.fit(100);
+    }
+
+    StageWonGame.prototype.onPlayAgain = function() {
+      return Game.instance.startingStage();
+    };
+
+    StageWonGame.prototype.onNextLevel = function() {
+      return Game.instance.nextStage();
+    };
+
+    return StageWonGame;
 
   })(Stage);
 

@@ -32,3 +32,18 @@ class Stage
     @QStage.on 'prestep', (dt) =>
       for teamName, conf of (@enemyStrategem or {})
         Team[ teamName ].step( dt )
+
+  transitionTo: (Stage) ->
+    fadeables = Q.select('Planet').items.concat Q.select('Star').items
+    @QStage.on 'step', (dt) =>
+      _.each fadeables, (sprite) ->
+        sprite.p.opacity = _.max [ 0, sprite.p.opacity - 0.02 ]
+
+      return unless _.all( fadeables, (sprite) -> sprite.p.opacity is 0 )
+      _.invoke fadeables, 'destroy'
+      _.each Q.select('Ship').items, (ship) ->
+        _.delay (-> ship.explode()), Q.random(0, 500)
+
+      @QStage.off 'step'
+
+      _.delay (-> Stage.load() ), 1000

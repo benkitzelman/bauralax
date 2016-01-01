@@ -4,6 +4,7 @@ Q.component 'shipBuilder',
     fn     = if Q.debug then setTimeout else setInterval
     @timer = fn @build.bind(this), @entity.p.buildRate or 1000
     @entity.on 'inserted', @, 'onInserted'
+    @entity.on 'destroyed', @, 'stopBuilding'
 
   onInserted: ->
     initialShips = @entity.p.startingShipCount or 0

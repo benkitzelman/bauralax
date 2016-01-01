@@ -32,8 +32,19 @@ class TouchInput extends Q.Evented
 
   normalize: (touch, stage) ->
     stage   = stage or @stage
-    canvasX = touch.offsetX or touch.layerX or (touch.pageX - Q.touch.offsetX)
-    canvasY = touch.offsetY or touch.layerY or (touch.pageY - Q.touch.offsetY)
+    canvasX = touch.offsetX or touch.layerX
+    canvasY = touch.offsetY or touch.layerY
+
+    if not canvasY or not canvasX
+      if not Q.touch.offsetX
+        el = Q.el
+        Q.touch.offsetX = Q.touch.offsetY = 0
+        while el = el.offsetParent
+          Q.touch.offsetX += el.offsetLeft;
+          Q.touch.offsetY += el.offsetTop;
+
+      canvasX = touch.pageX - Q.touch.offsetX
+      canvasY = touch.pageY - Q.touch.offsetY
 
     evt      = new Q.Evented()
     evt.grid = {}
@@ -53,12 +64,15 @@ class TouchInput extends Q.Evented
     evt
 
   onTouch: (e) ->
-    @activeTouch = @normalize( e )
+    touch = _.first( e.changedTouches or [ e ] )
+    touch.identifier = touch.identifier or 0
+    @activeTouch     = @normalize touch
     @trigger 'touch-start', @activeTouch
 
   onTouchEnd: (e) ->
+    touch   = _.first( e.changedTouches or [ e ] )
     evtName = if @state is 'selecting' then 'touch-drag-end' else 'touch'
-    @trigger evtName, @activeTouch, @normalize(e)
+    @trigger evtName, @activeTouch, @normalize( touch )
 
     @state = 'waiting'
     delete @activeTouch
@@ -66,5 +80,6 @@ class TouchInput extends Q.Evented
   onDrag: (e) ->
     return unless @activeTouch
     @state = 'selecting'
-    @trigger 'touch-drag-change', { origin: @activeTouch, current: @normalize(e) }
+    touch = _.first( e.changedTouches or [ e ] )
+    @trigger 'touch-drag-change', { origin: @activeTouch, current: @normalize( touch ) }
 

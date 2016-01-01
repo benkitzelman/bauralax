@@ -36,20 +36,27 @@ class Game
     @currentLevelIdx = 0
     @playerTeam      = Team.GREEN
 
-    @playerTeam.on 'planet-won',  @, 'nextStage'
-    @playerTeam.on 'planet-lost', @, 'nextStage'
+    @playerTeam.on 'planet-won',  @, 'winLoseOrContinue'
+    @playerTeam.on 'planet-lost', @, 'winLoseOrContinue'
 
   stages: ->
     [
+      StageDebug
       StageOne
       StageTwo
-      # 'level2'
-      # 'endGame'
     ]
+
+  isLastStage: ->
+    @stages()[ @currentLevelIdx + 1 ]?
 
   nextStage: ->
     @currentLevelIdx ?= 0
+    @stages()[ ++@currentLevelIdx ]?.load()
 
+  currentStage: ->
+    @stages()[ @currentLevelIdx ]?.instance
+
+  winLoseOrContinue: ->
     planets = ->
       Q.select('Planet')?.items
 
@@ -57,15 +64,23 @@ class Game
       _.all planets(), (p) -> p.teamResource.belongsToPlayer()
 
     hasLost = ->
-      not _.any planets(), (p) -> p.teamResource.belongsToPlayer()
+      _.all planets(), (p) -> not p.teamResource.belongsToPlayer()
 
-    return @stages()[ ++@currentLevelIdx ]?.load() if hasWon()
-    return @stages()[ @currentLevelIdx ]?.load() if hasLost()
+    return @currentStage().transitionTo( StageWonGame  ) if hasWon()
+    return @currentStage().transitionTo( StageLostGame ) if hasLost()
+    # continue
 
   loadAssets: ->
     _.invoke @stages(), 'register'
 
     @Q.load Game.assets.join(', '), =>
       # Finally, call stageScene to run the game
-      _.first( @stages() ).load()
+      @startingStage()
       Game.started.resolveWith this
+
+  startingStage: ->
+    Q.clearStages()
+    _.first( @stages() ).load()
+
+  replayLastStage: ->
+    @stages()[ @currentLevelIdx ].load()
