@@ -14,9 +14,29 @@ class Stage
     @addBackground()
     @addPlanets()
 
+  autoScale: ->
+    padding = 75
+    min =
+      x: _.reduce( @planets, ((min, p) -> min = _.min [ p.x, min ]), @planets[0].x )
+      y: _.reduce( @planets, ((min, p) -> min = _.min [ p.y, min ]), @planets[0].y )
+
+    max =
+      x: _.reduce( @planets, ((max, p) -> max = _.max [ p.x, max ]), @planets[0].x )
+      y: _.reduce( @planets, ((max, p) -> max = _.max [ p.y, max ]), @planets[0].y )
+
+    playableWidth  = max.x - min.x + padding * 2
+    playableHeight = max.y - min.y + padding * 2
+    scaleWidth     = _.min [ 1, Q.cssWidth / playableWidth ]
+    scaleHeight    = _.min [ 1, Q.cssHeight / playableHeight ]
+
+    _.min [ scaleWidth, scaleHeight ]
+
   setupStage: ->
     @QStage.add "viewport"
     @QStage.add "selectionControls"
+
+    @QStage.viewport.scale = @viewport?.scale or @autoScale()
+    @QStage.centerOn(coords.x, coords.y) if coords = @viewport?.coords
 
   addBackground: ->
     @QStage.insert(new Q.Star) for [1..(Q.width * Q.height / 10000)]
@@ -46,4 +66,7 @@ class Stage
 
       @QStage.off 'step'
 
-      _.delay (-> Stage.load() ), 1000
+      _.delay (->
+        Q.clearStages()
+        Stage.load()
+      ), 1000

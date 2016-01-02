@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-01-01
+/*! bauralux - v1.0.0 - 2016-01-02
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16575,14 +16575,17 @@ Quintus.UI = function(Q) {
 
   Q.component('selectionControls', {
     added: function() {
-      var input;
       this.stage = this.entity;
-      input = new TouchInput({
+      this.input = new TouchInput({
         stage: this.stage
       });
-      input.on('touch-drag-change', this, 'drawSelection');
-      input.on('touch-drag-end', this, 'removeSelection');
-      return input.on('touch', this, 'moveShips');
+      this.input.on('touch-drag-change', this, 'drawSelection');
+      this.input.on('touch-drag-end', this, 'removeSelection');
+      this.input.on('touch', this, 'moveShips');
+      return this.stage.on('destroyed', this, 'destroy');
+    },
+    destroy: function() {
+      return this.input.destroy();
     },
     drawSelection: function(arg) {
       var current, origin;
@@ -16643,16 +16646,15 @@ Quintus.UI = function(Q) {
 
   Q.component('shipBuilder', {
     added: function() {
-      var fn;
-      fn = Q.debug ? setTimeout : setInterval;
-      this.timer = fn(this.build.bind(this), this.entity.p.buildRate || 1000);
+      this.timeSinceLastShipMS = 0;
       this.entity.on('inserted', this, 'onInserted');
-      return this.entity.on('destroyed', this, 'stopBuilding');
+      this.entity.on('destroyed', this, 'stopBuilding');
+      return this.entity.on('step', this, 'onStep');
     },
     onInserted: function() {
       var initialShips;
       initialShips = this.entity.p.startingShipCount || 0;
-      return _.defer((function(_this) {
+      return _.defer(((function(_this) {
         return function() {
           var results;
           results = [];
@@ -16661,7 +16663,16 @@ Quintus.UI = function(Q) {
           }
           return results;
         };
-      })(this));
+      })(this)));
+    },
+    buildRate: function() {
+      return this.entity.p.buildRate || 1000;
+    },
+    onStep: function(dt) {
+      this.timeSinceLastShipMS += dt * 1000;
+      if (this.timeSinceLastShipMS >= this.buildRate()) {
+        return this.build();
+      }
     },
     stopBuilding: function() {
       return clearInterval(this.timer);
@@ -16699,6 +16710,7 @@ Quintus.UI = function(Q) {
         path: [coords]
       });
       ship.builder = this.entity;
+      this.timeSinceLastShipMS = 0;
       this.entity.stage.insert(ship);
       return this.entity.trigger('shipBuilder:shipBuilt', ship);
     }
@@ -16888,6 +16900,7 @@ Quintus.UI = function(Q) {
     };
 
     Game.prototype.replayLastStage = function() {
+      Q.clearStages();
       return this.stages()[this.currentLevelIdx].load();
     };
 
@@ -17540,7 +17553,7 @@ Quintus.UI = function(Q) {
   Q.Sprite.extend("Planet", {
     init: function(p) {
       var scale;
-      scale = _.max([0.4, Math.ceil(Math.random() * 10) / 10]);
+      scale = _.max([0.6, Math.ceil(Math.random() * 10) / 10]);
       this._super(Q._extend({
         sensor: true,
         asset: this.randomAsset(),
@@ -17756,6 +17769,7 @@ Quintus.UI = function(Q) {
     draw: function(ctx) {
       this._super(ctx);
       this.drawTeamColour(ctx);
+      this.drawHaze(ctx);
       if (this.p.isSelected) {
         return this.drawSelectionMarker(ctx);
       }
@@ -17947,9 +17961,40 @@ Quintus.UI = function(Q) {
       this.addPlanets();
     }
 
+    Stage.prototype.autoScale = function() {
+      var max, min, padding, playableHeight, playableWidth, scaleHeight, scaleWidth;
+      padding = 75;
+      min = {
+        x: _.reduce(this.planets, (function(min, p) {
+          return min = _.min([p.x, min]);
+        }), this.planets[0].x),
+        y: _.reduce(this.planets, (function(min, p) {
+          return min = _.min([p.y, min]);
+        }), this.planets[0].y)
+      };
+      max = {
+        x: _.reduce(this.planets, (function(max, p) {
+          return max = _.max([p.x, max]);
+        }), this.planets[0].x),
+        y: _.reduce(this.planets, (function(max, p) {
+          return max = _.max([p.y, max]);
+        }), this.planets[0].y)
+      };
+      playableWidth = max.x - min.x + padding * 2;
+      playableHeight = max.y - min.y + padding * 2;
+      scaleWidth = _.min([1, Q.cssWidth / playableWidth]);
+      scaleHeight = _.min([1, Q.cssHeight / playableHeight]);
+      return _.min([scaleWidth, scaleHeight]);
+    };
+
     Stage.prototype.setupStage = function() {
+      var coords, ref, ref1;
       this.QStage.add("viewport");
-      return this.QStage.add("selectionControls");
+      this.QStage.add("selectionControls");
+      this.QStage.viewport.scale = ((ref = this.viewport) != null ? ref.scale : void 0) || this.autoScale();
+      if (coords = (ref1 = this.viewport) != null ? ref1.coords : void 0) {
+        return this.QStage.centerOn(coords.x, coords.y);
+      }
     };
 
     Stage.prototype.addBackground = function() {
@@ -18016,6 +18061,7 @@ Quintus.UI = function(Q) {
           });
           _this.QStage.off('step');
           return _.delay((function() {
+            Q.clearStages();
             return Stage.load();
           }), 1000);
         };
@@ -18032,6 +18078,13 @@ Quintus.UI = function(Q) {
     function StageDebug() {
       return StageDebug.__super__.constructor.apply(this, arguments);
     }
+
+    StageDebug.prototype.viewport = {
+      coords: {
+        x: 500,
+        y: 300
+      }
+    };
 
     StageDebug.prototype.planets = [
       {
@@ -18089,6 +18142,10 @@ Quintus.UI = function(Q) {
       this.container.fit(50);
     }
 
+    StageLostGame.prototype.autoScale = function() {
+      return 1;
+    };
+
     StageLostGame.prototype.onTryAgain = function() {
       return Game.instance.startingStage();
     };
@@ -18103,6 +18160,13 @@ Quintus.UI = function(Q) {
     function StageOne() {
       return StageOne.__super__.constructor.apply(this, arguments);
     }
+
+    StageOne.prototype.viewport = {
+      coords: {
+        x: 350,
+        y: 350
+      }
+    };
 
     StageOne.prototype.planets = [
       {
@@ -18146,6 +18210,13 @@ Quintus.UI = function(Q) {
     function StageTwo() {
       return StageTwo.__super__.constructor.apply(this, arguments);
     }
+
+    StageTwo.prototype.viewport = {
+      coords: {
+        x: 400,
+        y: 325
+      }
+    };
 
     StageTwo.prototype.planets = [
       {
@@ -18229,6 +18300,10 @@ Quintus.UI = function(Q) {
       }
       this.container.fit(100);
     }
+
+    StageWonGame.prototype.autoScale = function() {
+      return 1;
+    };
 
     StageWonGame.prototype.onPlayAgain = function() {
       return Game.instance.startingStage();

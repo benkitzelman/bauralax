@@ -22,6 +22,8 @@ class StageWonGame extends Stage
 
     @container.fit 100
 
+  autoScale: -> 1
+
   onPlayAgain: ->
     Game.instance.startingStage()
 

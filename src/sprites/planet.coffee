@@ -1,6 +1,6 @@
 Q.Sprite.extend "Planet",
   init: (p) ->
-    scale  = _.max [0.4, (Math.ceil(Math.random() * 10) / 10)]
+    scale  = _.max [0.6, (Math.ceil(Math.random() * 10) / 10)]
 
     @_super Q._extend
       sensor           : true

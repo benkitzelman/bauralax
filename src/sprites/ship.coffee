@@ -26,7 +26,7 @@ Q.Sprite.extend "Ship",
   draw: (ctx) ->
     @_super ctx
     @drawTeamColour ctx
-    # @drawHaze ctx
+    @drawHaze ctx
     @drawSelectionMarker( ctx ) if @p.isSelected
 
   drawTeamColour: (ctx) ->

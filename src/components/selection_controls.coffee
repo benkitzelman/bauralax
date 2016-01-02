@@ -2,10 +2,15 @@ Q.component 'selectionControls',
 
   added: ->
     @stage = @entity
-    input = new TouchInput(stage: @stage)
-    input.on 'touch-drag-change', @, 'drawSelection'
-    input.on 'touch-drag-end', @, 'removeSelection'
-    input.on 'touch', @, 'moveShips'
+    @input = new TouchInput(stage: @stage)
+    @input.on 'touch-drag-change', @, 'drawSelection'
+    @input.on 'touch-drag-end', @, 'removeSelection'
+    @input.on 'touch', @, 'moveShips'
+
+    @stage.on 'destroyed', @, 'destroy'
+
+  destroy: ->
+    @input.destroy()
 
   drawSelection: ({origin, current}) ->
     @selector = @findOrCreateSelector()

@@ -83,4 +83,5 @@ class Game
     _.first( @stages() ).load()
 
   replayLastStage: ->
+    Q.clearStages()
     @stages()[ @currentLevelIdx ].load()

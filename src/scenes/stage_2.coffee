@@ -1,4 +1,7 @@
 class StageTwo extends Stage
+  viewport:
+    coords: { x: 400, y: 325 }
+
   planets: [
     (x: 200, y: 100, startingShipCount: 50, team: Team.RED)
     (x: 100, y: 550, startingShipCount: 50, team: Team.BLUE)

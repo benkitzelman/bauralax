@@ -1,15 +1,21 @@
 Q.component 'shipBuilder',
 
   added: ->
-    fn     = if Q.debug then setTimeout else setInterval
-    @timer = fn @build.bind(this), @entity.p.buildRate or 1000
+    @timeSinceLastShipMS = 0
     @entity.on 'inserted', @, 'onInserted'
     @entity.on 'destroyed', @, 'stopBuilding'
+    @entity.on 'step', @, 'onStep'
 
   onInserted: ->
     initialShips = @entity.p.startingShipCount or 0
-    _.defer =>
-      @build() while initialShips--
+    _.defer ( => @build() while initialShips-- )
+
+  buildRate: ->
+    @entity.p.buildRate or 1000
+
+  onStep: (dt) ->
+    @timeSinceLastShipMS += dt * 1000
+    @build() if @timeSinceLastShipMS >= @buildRate()
 
   stopBuilding: ->
     clearInterval @timer
@@ -34,9 +40,10 @@ Q.component 'shipBuilder',
 
     { x, y } = @entity.p
 
-    coords       = @nextCoords()
-    ship         = new Q.Ship(x: x, y: y, team: team, path: [ coords ])
-    ship.builder = @entity
+    coords               = @nextCoords()
+    ship                 = new Q.Ship(x: x, y: y, team: team, path: [ coords ])
+    ship.builder         = @entity
+    @timeSinceLastShipMS = 0
 
     @entity.stage.insert ship
     @entity.trigger 'shipBuilder:shipBuilt', ship

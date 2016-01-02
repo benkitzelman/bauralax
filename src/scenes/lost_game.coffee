@@ -15,5 +15,7 @@ class StageLostGame extends Stage
     @container.insert button
     @container.fit 50
 
+  autoScale: -> 1
+
   onTryAgain: ->
     Game.instance.startingStage()
