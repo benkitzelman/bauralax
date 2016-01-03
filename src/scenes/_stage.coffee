@@ -37,6 +37,7 @@ class Stage
 
     @QStage.viewport.scale = @viewport?.scale or @autoScale()
     @QStage.centerOn(coords.x, coords.y) if coords = @viewport?.coords
+    # @QStage.collide = (obj, options) ->
 
   addBackground: ->
     @QStage.insert(new Q.Star) for [1..(Q.width * Q.height / 10000)]

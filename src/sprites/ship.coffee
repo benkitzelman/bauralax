@@ -4,6 +4,7 @@ Q.Sprite.extend "Ship",
       type         : Q.SPRITE_DEFAULT
       sensor       : true
       team         : Team.NONE
+      collisions   : false
       asset        : '/assets/images/ship.png'
       maxSpeed     : 30
       acceleration : 10
@@ -24,10 +25,20 @@ Q.Sprite.extend "Ship",
     @on "hit.sprite", @, 'onCollision'
 
   draw: (ctx) ->
-    @_super ctx
+    @drawShip ctx
     @drawTeamColour ctx
     @drawHaze ctx
     @drawSelectionMarker( ctx ) if @p.isSelected
+
+  drawShip: (ctx) ->
+    ctx.save()
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.beginPath()
+    ctx.fillStyle = "white"
+    ctx.arc 0, 0, 1, 0, 180
+    ctx.fill()
+    ctx.closePath()
+    ctx.restore()
 
   drawTeamColour: (ctx) ->
     ctx.save()

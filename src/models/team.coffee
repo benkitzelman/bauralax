@@ -1,7 +1,7 @@
 class Team extends Q.Evented
   @NONE  = new Team(name: "None",  rgb: [65, 65, 65])
   @RED   = new Team(name: "Red",   rgb: [255, 0, 0])
-  @GREEN = new Team(name: "Green", rgb: [0, 255, 0])
+  @GREEN = new Team(name: "Green", rgb: [45, 205, 45])
   @BLUE  = new Team(name: "Blue",  rgb: [0, 0, 255])
 
   constructor: (params) ->

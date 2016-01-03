@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-01-02
+/*! bauralux - v1.0.0 - 2016-01-03
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -9648,6 +9648,7 @@ return l(o),l(i),n},J.min=function(n,t,e){var u=1/0,o=u;if(typeof t!="function"&
 return n?new Q(e,n):e}}),St(["push","reverse","sort","unshift"],function(n){var t=ae[n];J.prototype[n]=function(){return t.apply(this.__wrapped__,arguments),this}}),St(["concat","slice","splice"],function(n){var t=ae[n];J.prototype[n]=function(){return new Q(t.apply(this.__wrapped__,arguments),this.__chain__)}}),J}var v,h=[],g=[],y=0,m=+new Date+"",b=75,_=40,d=" \t\x0B\f\xa0\ufeff\n\r\u2028\u2029\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000",w=/\b__p\+='';/g,j=/\b(__p\+=)''\+/g,k=/(__e\(.*?\)|\b__t\))\+'';/g,x=/\$\{([^\\}]*(?:\\.[^\\}]*)*)\}/g,C=/\w*$/,O=/^\s*function[ \n\r\t]+\w/,N=/<%=([\s\S]+?)%>/g,I=RegExp("^["+d+"]*0+(?=.$)"),S=/($^)/,E=/\bthis\b/,R=/['\n\r\t\u2028\u2029\\]/g,A="Array Boolean Date Function Math Number Object RegExp String _ attachEvent clearTimeout isFinite isNaN parseInt setTimeout".split(" "),D="[object Arguments]",$="[object Array]",T="[object Boolean]",F="[object Date]",B="[object Function]",W="[object Number]",q="[object Object]",z="[object RegExp]",P="[object String]",K={};
 K[B]=false,K[D]=K[$]=K[T]=K[F]=K[W]=K[q]=K[z]=K[P]=true;var L={leading:false,maxWait:0,trailing:false},M={configurable:false,enumerable:false,value:null,writable:false},V={"boolean":false,"function":true,object:true,number:false,string:false,undefined:false},U={"\\":"\\","'":"'","\n":"n","\r":"r","\t":"t","\u2028":"u2028","\u2029":"u2029"},G=V[typeof window]&&window||this,H=V[typeof exports]&&exports&&!exports.nodeType&&exports,J=V[typeof module]&&module&&!module.nodeType&&module,Q=J&&J.exports===H&&H,X=V[typeof global]&&global;!X||X.global!==X&&X.window!==X||(G=X);
 var Y=s();typeof define=="function"&&typeof define.amd=="object"&&define.amd?(G._=Y, define(function(){return Y})):H&&J?Q?(J.exports=Y)._=Y:H._=Y:G._=Y}).call(this);
+!function(a,b){function c(a,b,c,d){this.max_objects=b||10,this.max_levels=c||4,this.level=d||0,this.bounds=a,this.objects=[],this.nodes=[]}c.prototype.split=function(){var a=this.level+1,d=b.round(this.bounds.width/2),e=b.round(this.bounds.height/2),f=b.round(this.bounds.x),g=b.round(this.bounds.y);this.nodes[0]=new c({x:f+d,y:g,width:d,height:e},this.max_objects,this.max_levels,a),this.nodes[1]=new c({x:f,y:g,width:d,height:e},this.max_objects,this.max_levels,a),this.nodes[2]=new c({x:f,y:g+e,width:d,height:e},this.max_objects,this.max_levels,a),this.nodes[3]=new c({x:f+d,y:g+e,width:d,height:e},this.max_objects,this.max_levels,a)},c.prototype.getIndex=function(a){var b=-1,c=this.bounds.x+this.bounds.width/2,d=this.bounds.y+this.bounds.height/2,e=a.y<d&&a.y+a.height<d,f=a.y>d;return a.x<c&&a.x+a.width<c?e?b=1:f&&(b=2):a.x>c&&(e?b=0:f&&(b=3)),b},c.prototype.insert=function(a){var b,c=0;if("undefined"!=typeof this.nodes[0]&&(b=this.getIndex(a),-1!==b))return void this.nodes[b].insert(a);if(this.objects.push(a),this.objects.length>this.max_objects&&this.level<this.max_levels)for("undefined"==typeof this.nodes[0]&&this.split();c<this.objects.length;)b=this.getIndex(this.objects[c]),-1!==b?this.nodes[b].insert(this.objects.splice(c,1)[0]):c+=1},c.prototype.retrieve=function(a){var b=this.getIndex(a),c=this.objects;if("undefined"!=typeof this.nodes[0])if(-1!==b)c=c.concat(this.nodes[b].retrieve(a));else for(var d=0;d<this.nodes.length;d+=1)c=c.concat(this.nodes[d].retrieve(a));return c},c.prototype.clear=function(){this.objects=[];for(var a=0;a<this.nodes.length;a+=1)"undefined"!=typeof this.nodes[a]&&this.nodes[a].clear();this.nodes=[]},a.Quadtree=c}(window,Math);
 //     Quintus Game Engine
 //     (c) 2012 Pascal Rettig, Cykod LLC
 //     Quintus may be freely distributed under the MIT license or GPLv2 License.
@@ -17328,7 +17329,7 @@ Quintus.UI = function(Q) {
 
     Team.GREEN = new Team({
       name: "Green",
-      rgb: [0, 255, 0]
+      rgb: [45, 205, 45]
     });
 
     Team.BLUE = new Team({
@@ -17747,6 +17748,7 @@ Quintus.UI = function(Q) {
         type: Q.SPRITE_DEFAULT,
         sensor: true,
         team: Team.NONE,
+        collisions: false,
         asset: '/assets/images/ship.png',
         maxSpeed: 30,
         acceleration: 10,
@@ -17767,12 +17769,22 @@ Quintus.UI = function(Q) {
       return this.on("hit.sprite", this, 'onCollision');
     },
     draw: function(ctx) {
-      this._super(ctx);
+      this.drawShip(ctx);
       this.drawTeamColour(ctx);
       this.drawHaze(ctx);
       if (this.p.isSelected) {
         return this.drawSelectionMarker(ctx);
       }
+    },
+    drawShip: function(ctx) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.beginPath();
+      ctx.fillStyle = "white";
+      ctx.arc(0, 0, 1, 0, 180);
+      ctx.fill();
+      ctx.closePath();
+      return ctx.restore();
     },
     drawTeamColour: function(ctx) {
       ctx.save();
