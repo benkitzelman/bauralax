@@ -2,14 +2,17 @@ class Game
   @assets = [
     # "sprites.json"
     # "sprites.png"
-    "/assets/images/star.png"
-    "/assets/images/ship.png"
-    "/assets/images/ship3.png"
-    "/assets/images/shieldFlare.png"
-    "/assets/images/planet0.png"
-    "/assets/images/planet1.png"
+    "star.png"
+    "ship.png"
+    "ship3.png"
+    "shieldFlare.png"
+    "planet0.png"
+    "planet1.png"
+    "earth.jpg"
+    "planet_sheet_0.png"
+    "planet_sheet_0.json"
 
-    "/assets/audio/ship_explosion.mp3"
+    "ship_explosion.mp3"
   ]
 
   @unitCap: 450
@@ -74,9 +77,17 @@ class Game
     _.invoke @stages(), 'register'
 
     @Q.load Game.assets.join(', '), =>
+      @Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json")
+      @configureAnimations()
       # Finally, call stageScene to run the game
       @startingStage()
       Game.started.resolveWith this
+
+  configureAnimations: ->
+    @Q.animations 'planet0',
+      rotate:
+        frames: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+        rate: 1/15
 
   startingStage: ->
     Q.clearStages()

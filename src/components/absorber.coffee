@@ -43,8 +43,8 @@ Q.component 'absorber',
   updateProgressBar: ->
     if not @_progressBar
       @_progressBar = new Q.ProgressBar(
-        x: @entity.p.x - (@entity.asset().width * @entity.p.scale / 2 + 5 + 30),
-        y: @entity.p.y - (@entity.asset().height * @entity.p.scale / 2)
+        x: @entity.p.x - (@entity.width() * @entity.p.scale / 2 + 5 + 30),
+        y: @entity.p.y - (@entity.height() * @entity.p.scale / 2)
       )
       @entity.stage.insert @_progressBar
 

@@ -3,7 +3,7 @@ Q.Sprite.extend 'SelectionBand',
     @_super _.defaults p,
       type   : Q.SPRITE_UI
       sensor : true
-      asset  : '/assets/images/star.png'
+      asset  : 'star.png'
       w      : 4
       h      : 4
       radius : 2

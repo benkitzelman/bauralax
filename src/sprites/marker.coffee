@@ -2,7 +2,7 @@ Q.Sprite.extend 'Marker',
 
   init: (p) ->
     @_super _.defaults p,
-      asset : '/assets/images/star.png'
+      asset : 'star.png'
       type  : Q.SPRITE_NONE
       gap   : 1
 

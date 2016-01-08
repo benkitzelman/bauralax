@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-01-03
+/*! bauralux - v1.0.0 - 2016-01-08
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16438,8 +16438,11 @@ Quintus.UI = function(Q) {
   };
 
   window.Q = Quintus({
-    development: true
-  }).include("Sprites, Math, Scenes, Input, 2D, Touch, UI, Audio").setup({
+    development: true,
+    imagePath: "./assets/images/",
+    audioPath: './assets/audio/',
+    dataPath: './assets/images/'
+  }).include("Sprites, Anim, Math, Scenes, Input, 2D, Touch, UI, Audio").setup({
     maximize: true,
     scaleToFit: true
   }).touch().enableSound();
@@ -16520,8 +16523,8 @@ Quintus.UI = function(Q) {
       var ref;
       if (!this._progressBar) {
         this._progressBar = new Q.ProgressBar({
-          x: this.entity.p.x - (this.entity.asset().width * this.entity.p.scale / 2 + 5 + 30),
-          y: this.entity.p.y - (this.entity.asset().height * this.entity.p.scale / 2)
+          x: this.entity.p.x - (this.entity.width() * this.entity.p.scale / 2 + 5 + 30),
+          y: this.entity.p.y - (this.entity.height() * this.entity.p.scale / 2)
         });
         this.entity.stage.insert(this._progressBar);
       }
@@ -16682,7 +16685,7 @@ Quintus.UI = function(Q) {
       var defaultDistance, dist, ref, rotation, x, y;
       defaultDistance = (function(_this) {
         return function() {
-          return (_this.entity.asset().width * _this.entity.p.scale / 2) + (10 * _this.entity.p.scale);
+          return (_this.entity.width() * _this.entity.p.scale / 2) + (10 * _this.entity.p.scale);
         };
       })(this);
       ref = this.entity.p, x = ref.x, y = ref.y;
@@ -16812,7 +16815,7 @@ Quintus.UI = function(Q) {
   })(Q.Evented);
 
   Game = (function() {
-    Game.assets = ["/assets/images/star.png", "/assets/images/ship.png", "/assets/images/ship3.png", "/assets/images/shieldFlare.png", "/assets/images/planet0.png", "/assets/images/planet1.png", "/assets/audio/ship_explosion.mp3"];
+    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planet0.png", "planet1.png", "earth.jpg", "planet_sheet_0.png", "planet_sheet_0.json", "ship_explosion.mp3"];
 
     Game.unitCap = 450;
 
@@ -16889,10 +16892,21 @@ Quintus.UI = function(Q) {
       _.invoke(this.stages(), 'register');
       return this.Q.load(Game.assets.join(', '), (function(_this) {
         return function() {
+          _this.Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json");
+          _this.configureAnimations();
           _this.startingStage();
           return Game.started.resolveWith(_this);
         };
       })(this));
+    };
+
+    Game.prototype.configureAnimations = function() {
+      return this.Q.animations('planet0', {
+        rotate: {
+          frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+          rate: 1 / 15
+        }
+      });
     };
 
     Game.prototype.startingStage = function() {
@@ -17488,7 +17502,7 @@ Quintus.UI = function(Q) {
   Q.Sprite.extend('Explosion', {
     init: function(p) {
       this._super(Q._extend({
-        asset: '/assets/images/shieldFlare.png',
+        asset: 'shieldFlare.png',
         type: Q.SPRITE_PARTICLE,
         color: '#FFFFFF',
         opacity: .5,
@@ -17527,7 +17541,7 @@ Quintus.UI = function(Q) {
   Q.Sprite.extend('Marker', {
     init: function(p) {
       return this._super(_.defaults(p, {
-        asset: '/assets/images/star.png',
+        asset: 'star.png',
         type: Q.SPRITE_NONE,
         gap: 1
       }));
@@ -17553,16 +17567,22 @@ Quintus.UI = function(Q) {
 
   Q.Sprite.extend("Planet", {
     init: function(p) {
-      var scale;
+      var scale, texture;
       scale = _.max([0.6, Math.ceil(Math.random() * 10) / 10]);
+      texture = 'earth.jpg';
       this._super(Q._extend({
         sensor: true,
         asset: this.randomAsset(),
+        texture: texture,
+        textureWidth: 550,
+        frameX: -Q.random(0, Q.asset(texture).width),
+        spinSpeed: Q.random(1, 5) / 10,
         scale: scale,
         team: Team.NONE,
         type: Q.SPRITE_DEFAULT,
         buildRate: 2000,
-        absorptionTarget: 50
+        absorptionTarget: 50,
+        angle: Q.random(-45, 45)
       }, p));
       this.add('teamResource');
       this.add('shipBuilder');
@@ -17573,12 +17593,23 @@ Quintus.UI = function(Q) {
     randomAsset: function() {
       var assets;
       assets = [0, 1].map(function(i) {
-        return "/assets/images/planet" + i + ".png";
+        return "planet" + i + ".png";
       });
       return assets[Math.floor(Math.random() * 10) % assets.length];
     },
+    width: function() {
+      var ref;
+      return ((ref = this.asset()) != null ? ref.width : void 0) || this.sheet().tileW;
+    },
+    height: function() {
+      var ref;
+      return ((ref = this.asset()) != null ? ref.height : void 0) || this.sheet().tileH;
+    },
     draw: function(ctx) {
-      this._super(ctx);
+      this.drawImage(ctx);
+      return this.drawTeamColors(ctx);
+    },
+    drawTeamColors: function(ctx) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
@@ -17587,8 +17618,69 @@ Quintus.UI = function(Q) {
       ctx.fill();
       return ctx.restore();
     },
+    drawImage: function(ctx) {
+      var diameter, drawImageClip, drawShadows, drawTexture, leftMostX, texture;
+      texture = Q.asset(this.p.texture);
+      leftMostX = -texture.width + this.radius();
+      diameter = this.radius() * 2;
+      drawImageClip = (function(_this) {
+        return function() {
+          ctx.beginPath();
+          ctx.arc(0, 0, _this.radius(), 0, Math.PI * 2, false);
+          ctx.closePath();
+          return ctx.clip();
+        };
+      })(this);
+      drawShadows = (function(_this) {
+        return function() {
+          ctx.globalAlpha = 1.00;
+          ctx.beginPath();
+          ctx.arc(0, 0, _this.radius(), Math.PI * 0.70, Math.PI * 1.30, false);
+          ctx.shadowColor = "black";
+          ctx.shadowBlur = 5;
+          ctx.shadowOffsetX = 5;
+          ctx.stroke();
+          ctx.closePath();
+          ctx.beginPath();
+          ctx.arc(0, 0, _this.radius(), -Math.PI * 0.30, Math.PI * 0.30, false);
+          ctx.shadowColor = "black";
+          ctx.shadowBlur = 5;
+          ctx.shadowOffsetX = -5;
+          ctx.stroke();
+          return ctx.closePath();
+        };
+      })(this);
+      drawTexture = (function(_this) {
+        return function() {
+          var joinX;
+          ctx.globalAlpha = 0.5;
+          ctx.drawImage(texture, _this.p.frameX, -texture.height / 2);
+          if (_this.p.frameX <= leftMostX + diameter) {
+            joinX = _this.p.frameX + texture.width;
+            return ctx.drawImage(texture, joinX, -texture.height / 2);
+          }
+        };
+      })(this);
+      ctx.save();
+      drawImageClip();
+      drawTexture();
+      drawShadows();
+      return ctx.restore();
+    },
+    step: function(dt) {
+      var hasScrolledToEndOfImage;
+      hasScrolledToEndOfImage = (function(_this) {
+        return function() {
+          return _this.p.frameX <= -(Q.asset(_this.p.texture).width + _this.radius());
+        };
+      })(this);
+      if (!this.p.frameX || hasScrolledToEndOfImage()) {
+        this.p.frameX = -this.radius();
+      }
+      return this.p.frameX -= this.p.spinSpeed || 1;
+    },
     radius: function() {
-      return this.asset().width / 2;
+      return this.width() / 2;
     },
     isInBounds: function(entityOrCoords) {
       var dx, dy, rSum, radius, ref, ref1, x, y;
@@ -17596,7 +17688,7 @@ Quintus.UI = function(Q) {
       if (!((x != null) && (y != null))) {
         return false;
       }
-      radius = this.asset().width * this.p.scale / 2;
+      radius = this.width() * this.p.scale / 2;
       dx = this.p.x - x;
       dy = this.p.y - y;
       rSum = radius + 1;
@@ -17629,7 +17721,7 @@ Quintus.UI = function(Q) {
   Q.Sprite.extend('ProgressBar', {
     init: function(p) {
       return this._super(_.defaults(p, {
-        asset: '/assets/images/star.png',
+        asset: 'star.png',
         type: Q.SPRITE_UI,
         w: 30,
         h: 5,
@@ -17653,7 +17745,7 @@ Quintus.UI = function(Q) {
       var offset, width;
       ctx.save();
       ctx.beginPath();
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
       ctx.fillRect(0, 0, this.p.w, this.p.h);
       offset = this.p.strokeWidth - 1;
       width = (this.p.w - this.p.strokeWidth) * (this.p.progress || 0);
@@ -17669,7 +17761,7 @@ Quintus.UI = function(Q) {
       return this._super(_.defaults(p, {
         type: Q.SPRITE_UI,
         sensor: true,
-        asset: '/assets/images/star.png',
+        asset: 'star.png',
         w: 4,
         h: 4,
         radius: 2
@@ -17706,7 +17798,7 @@ Quintus.UI = function(Q) {
   Q.Sprite.extend('ShieldFlare', {
     init: function(p) {
       this._super(Q._extend({
-        asset: '/assets/images/shieldFlare.png',
+        asset: 'shieldFlare.png',
         type: Q.SPRITE_PARTICLE,
         color: '#FFFFFF',
         opacity: .5,
@@ -17749,7 +17841,7 @@ Quintus.UI = function(Q) {
         sensor: true,
         team: Team.NONE,
         collisions: false,
-        asset: '/assets/images/ship.png',
+        asset: 'ship.png',
         maxSpeed: 30,
         acceleration: 10,
         angle: 90,
@@ -17917,7 +18009,7 @@ Quintus.UI = function(Q) {
         radius: this.asset().width * 3,
         color: color || this.teamResource.val().color(0.75)
       }));
-      Q.audio.play('/assets/audio/ship_explosion.mp3');
+      Q.audio.play('ship_explosion.mp3');
       return this.destroy();
     },
     onCollision: function(collision) {
@@ -17942,7 +18034,7 @@ Quintus.UI = function(Q) {
         x: Math.random() * Q.width,
         y: Math.random() * Q.height,
         scale: Math.max(Math.random(), .3),
-        asset: '/assets/images/star.png',
+        asset: 'star.png',
         type: Q.SPRITE_PARTICLE
       });
     }

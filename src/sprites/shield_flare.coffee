@@ -2,7 +2,7 @@ Q.Sprite.extend 'ShieldFlare',
 
   init: (p) ->
     @_super Q._extend
-        asset       : '/assets/images/shieldFlare.png'
+        asset       : 'shieldFlare.png'
         type        : Q.SPRITE_PARTICLE
         color       : '#FFFFFF'
         opacity     : .5

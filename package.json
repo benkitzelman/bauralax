@@ -20,6 +20,7 @@
     "grunt-http-server": "^1.13.0",
     "http-server": "~ 0.5.5",
     "lodash": "^3.10.1",
-    "quintus": "^0.2.0"
+    "quintus": "^0.2.0",
+    "spriter": "0.2.4"
   }
 }

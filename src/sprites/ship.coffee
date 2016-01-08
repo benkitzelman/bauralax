@@ -5,7 +5,7 @@ Q.Sprite.extend "Ship",
       sensor       : true
       team         : Team.NONE
       collisions   : false
-      asset        : '/assets/images/ship.png'
+      asset        : 'ship.png'
       maxSpeed     : 30
       acceleration : 10
       angle        : 90
@@ -162,7 +162,7 @@ Q.Sprite.extend "Ship",
       radius: @asset().width * 3
       color : color or @teamResource.val().color(0.75)
 
-    Q.audio.play '/assets/audio/ship_explosion.mp3'
+    Q.audio.play 'ship_explosion.mp3'
     @destroy()
 
   onCollision: (collision) ->

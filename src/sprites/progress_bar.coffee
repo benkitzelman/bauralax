@@ -1,7 +1,7 @@
 Q.Sprite.extend 'ProgressBar',
   init: (p) ->
     @_super _.defaults p,
-      asset       : '/assets/images/star.png'
+      asset       : 'star.png'
       type        : Q.SPRITE_UI
       w           : 30
       h           : 5
@@ -24,7 +24,7 @@ Q.Sprite.extend 'ProgressBar',
     ctx.beginPath()
 
     # box
-    ctx.fillStyle = "rgba(255,255,255,0.5)"
+    ctx.fillStyle = "rgba(255,255,255,0.75)"
     ctx.fillRect 0, 0, @p.w, @p.h
 
     # progress fill

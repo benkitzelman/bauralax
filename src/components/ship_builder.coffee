@@ -22,7 +22,7 @@ Q.component 'shipBuilder',
 
   nextCoords: ->
     defaultDistance = =>
-      ( @entity.asset().width * @entity.p.scale / 2 ) + ( 10  * @entity.p.scale )
+      ( @entity.width() * @entity.p.scale / 2 ) + ( 10  * @entity.p.scale )
 
     { x, y } = @entity.p
 
