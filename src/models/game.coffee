@@ -6,11 +6,20 @@ class Game
     "ship.png"
     "ship3.png"
     "shieldFlare.png"
-    "planet0.png"
-    "planet1.png"
-    "earth.jpg"
-    "planet_sheet_0.png"
-    "planet_sheet_0.json"
+
+    "planets/red/0.png"
+    "planets/red/1.png"
+    "planets/green/0.png"
+    "planets/green/1.png"
+    "planets/blue/0.png"
+    "planets/blue/1.png"
+    "planets/none/0.png"
+    "planets/none/1.png"
+
+    "planets/planet0.png"
+    "planets/planet1.png"
+    "planets/planet_sheet_0.png"
+    "planets/planet_sheet_0.json"
 
     "ship_explosion.mp3"
   ]

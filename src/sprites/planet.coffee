@@ -1,15 +1,16 @@
 Q.Sprite.extend "Planet",
   init: (p) ->
     scale   = _.max [0.6, (Math.ceil(Math.random() * 10) / 10)]
-    texture = 'earth.jpg'
+    texture = 'planets/red/0.png'
 
     @_super Q._extend
       sensor           : true
-      asset            : @randomAsset()
-      texture          : texture
+      asset            : "planets/planet0.png"
+      texture          : 'planets/none/0.png'
       textureWidth     : 550
       frameX           : -Q.random( 0, Q.asset( texture ).width )
       spinSpeed        : Q.random(1, 5) / 10
+      spinDirection    : [ 1, -1 ][ Q.random 0, 1 ]
       scale            : scale
       team             : Team.NONE
       type             : Q.SPRITE_DEFAULT
@@ -25,15 +26,18 @@ Q.Sprite.extend "Planet",
     @on 'absorption:target-met', @, 'onAbsorptionTargetMet'
     @on 'absorption:absorbed', @, 'onAbsorbed'
 
-  randomAsset: ->
-    assets = [0..1].map (i) -> "planet#{i}.png"
-    assets[ Math.floor(Math.random() * 10) % (assets.length) ]
+    @p.texture = @randomTeamTexture()
 
   width: ->
-    @asset()?.width or @sheet().tileW
+    @asset()?.width or @sheet()?.tileW
 
   height: ->
-    @asset()?.height or @sheet().tileH
+    @asset()?.height or @sheet()?.tileH
+
+  randomTeamTexture: ->
+    asset = "#{ Q.random(0, 1) }.png"
+    return "planets/#{ team.toLowerCase()}/#{ asset }" if team = @p.team?.name
+    "planets/none/#{ asset }"
 
   draw: (ctx) ->
     @drawImage ctx
@@ -51,9 +55,9 @@ Q.Sprite.extend "Planet",
     ctx.restore()
 
   drawImage: (ctx) ->
-    texture   = Q.asset @p.texture
-    leftMostX = -texture.width + @radius()
-    diameter  = @radius() * 2
+    texture      = Q.asset @p.texture
+    textureEdgeX = -texture.width + @radius()
+    diameter     = @radius() * 2
 
     # create the mask for the image scroller
     drawImageClip = =>
@@ -64,6 +68,7 @@ Q.Sprite.extend "Planet",
 
     # draw shadows on left and right side of globe
     drawShadows = =>
+      ctx.globalCompositeOperation = 'overlay'
       ctx.globalAlpha = 1.00
 
       # left
@@ -86,10 +91,11 @@ Q.Sprite.extend "Planet",
 
     # draw the texture into the clip
     drawTexture = =>
-      ctx.globalAlpha = 0.5
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.globalAlpha = 1
       ctx.drawImage texture, @p.frameX, -texture.height / 2
 
-      if @p.frameX <= leftMostX + diameter
+      if @p.frameX <= textureEdgeX + diameter
         joinX = @p.frameX + texture.width
         ctx.drawImage texture, joinX, -texture.height / 2
     #--
@@ -107,7 +113,7 @@ Q.Sprite.extend "Planet",
       @p.frameX <= -( Q.asset( @p.texture ).width + @radius() )
 
     @p.frameX  = -@radius() if !@p.frameX or hasScrolledToEndOfImage()
-    @p.frameX -= ( @p.spinSpeed or 1 )
+    @p.frameX -= @p.spinSpeed or 1
 
   radius: ->
     @width() / 2
@@ -125,6 +131,7 @@ Q.Sprite.extend "Planet",
   onAbsorptionTargetMet: (absorbingTeam) ->
     reliquishingTeam = @teamResource.val()
     @teamResource.val absorbingTeam
+    @p.texture = @randomTeamTexture()
 
     reliquishingTeam.trigger 'planet-lost', { planet: @, conquoringTeam: absorbingTeam }
     absorbingTeam.trigger 'planet-won', { planet: @, reliquishingTeam }

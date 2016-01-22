@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-01-08
+/*! bauralux - v1.0.0 - 2016-01-22
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16815,7 +16815,7 @@ Quintus.UI = function(Q) {
   })(Q.Evented);
 
   Game = (function() {
-    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planet0.png", "planet1.png", "earth.jpg", "planet_sheet_0.png", "planet_sheet_0.json", "ship_explosion.mp3"];
+    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_explosion.mp3"];
 
     Game.unitCap = 450;
 
@@ -17569,14 +17569,15 @@ Quintus.UI = function(Q) {
     init: function(p) {
       var scale, texture;
       scale = _.max([0.6, Math.ceil(Math.random() * 10) / 10]);
-      texture = 'earth.jpg';
+      texture = 'planets/red/0.png';
       this._super(Q._extend({
         sensor: true,
-        asset: this.randomAsset(),
-        texture: texture,
+        asset: "planets/planet0.png",
+        texture: 'planets/none/0.png',
         textureWidth: 550,
         frameX: -Q.random(0, Q.asset(texture).width),
         spinSpeed: Q.random(1, 5) / 10,
+        spinDirection: [1, -1][Q.random(0, 1)],
         scale: scale,
         team: Team.NONE,
         type: Q.SPRITE_DEFAULT,
@@ -17588,22 +17589,24 @@ Quintus.UI = function(Q) {
       this.add('shipBuilder');
       this.add('absorber');
       this.on('absorption:target-met', this, 'onAbsorptionTargetMet');
-      return this.on('absorption:absorbed', this, 'onAbsorbed');
-    },
-    randomAsset: function() {
-      var assets;
-      assets = [0, 1].map(function(i) {
-        return "planet" + i + ".png";
-      });
-      return assets[Math.floor(Math.random() * 10) % assets.length];
+      this.on('absorption:absorbed', this, 'onAbsorbed');
+      return this.p.texture = this.randomTeamTexture();
     },
     width: function() {
-      var ref;
-      return ((ref = this.asset()) != null ? ref.width : void 0) || this.sheet().tileW;
+      var ref, ref1;
+      return ((ref = this.asset()) != null ? ref.width : void 0) || ((ref1 = this.sheet()) != null ? ref1.tileW : void 0);
     },
     height: function() {
-      var ref;
-      return ((ref = this.asset()) != null ? ref.height : void 0) || this.sheet().tileH;
+      var ref, ref1;
+      return ((ref = this.asset()) != null ? ref.height : void 0) || ((ref1 = this.sheet()) != null ? ref1.tileH : void 0);
+    },
+    randomTeamTexture: function() {
+      var asset, ref, team;
+      asset = (Q.random(0, 1)) + ".png";
+      if (team = (ref = this.p.team) != null ? ref.name : void 0) {
+        return "planets/" + (team.toLowerCase()) + "/" + asset;
+      }
+      return "planets/none/" + asset;
     },
     draw: function(ctx) {
       this.drawImage(ctx);
@@ -17619,9 +17622,9 @@ Quintus.UI = function(Q) {
       return ctx.restore();
     },
     drawImage: function(ctx) {
-      var diameter, drawImageClip, drawShadows, drawTexture, leftMostX, texture;
+      var diameter, drawImageClip, drawShadows, drawTexture, texture, textureEdgeX;
       texture = Q.asset(this.p.texture);
-      leftMostX = -texture.width + this.radius();
+      textureEdgeX = -texture.width + this.radius();
       diameter = this.radius() * 2;
       drawImageClip = (function(_this) {
         return function() {
@@ -17633,6 +17636,7 @@ Quintus.UI = function(Q) {
       })(this);
       drawShadows = (function(_this) {
         return function() {
+          ctx.globalCompositeOperation = 'overlay';
           ctx.globalAlpha = 1.00;
           ctx.beginPath();
           ctx.arc(0, 0, _this.radius(), Math.PI * 0.70, Math.PI * 1.30, false);
@@ -17653,9 +17657,10 @@ Quintus.UI = function(Q) {
       drawTexture = (function(_this) {
         return function() {
           var joinX;
-          ctx.globalAlpha = 0.5;
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = 1;
           ctx.drawImage(texture, _this.p.frameX, -texture.height / 2);
-          if (_this.p.frameX <= leftMostX + diameter) {
+          if (_this.p.frameX <= textureEdgeX + diameter) {
             joinX = _this.p.frameX + texture.width;
             return ctx.drawImage(texture, joinX, -texture.height / 2);
           }
@@ -17698,6 +17703,7 @@ Quintus.UI = function(Q) {
       var reliquishingTeam;
       reliquishingTeam = this.teamResource.val();
       this.teamResource.val(absorbingTeam);
+      this.p.texture = this.randomTeamTexture();
       reliquishingTeam.trigger('planet-lost', {
         planet: this,
         conquoringTeam: absorbingTeam
