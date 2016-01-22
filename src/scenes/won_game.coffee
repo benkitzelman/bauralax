@@ -1,8 +1,7 @@
-class StageWonGame extends Stage
+class StageWonGame extends Menu
   @register()
 
-  constructor: (@QStage) ->
-    @setupStage()
+  addUI: ->
     @container = @QStage.insert( new Q.UI.Container
       x: Q.width/2, y: Q.height/2, fill: "rgba(0,0,0,0.5)"
     )
@@ -19,10 +18,7 @@ class StageWonGame extends Stage
       againBtn.on "click", @, 'onPlayAgain'
       @container.insert againBtn
 
-
     @container.fit 100
-
-  autoScale: -> 1
 
   onPlayAgain: ->
     Game.instance.startingStage()

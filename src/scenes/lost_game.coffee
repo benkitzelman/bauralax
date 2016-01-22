@@ -1,8 +1,7 @@
-class StageLostGame extends Stage
+class StageLostGame extends Menu
   @register()
 
-  constructor: (@QStage) ->
-    @setupStage()
+  addUI: ->
     @container = @QStage.insert( new Q.UI.Container
       x: Q.width/2, y: Q.height/2, fill: "rgba(0,0,0,0.5)"
     )
@@ -14,8 +13,6 @@ class StageLostGame extends Stage
     @container.insert label
     @container.insert button
     @container.fit 50
-
-  autoScale: -> 1
 
   onTryAgain: ->
     Game.instance.startingStage()

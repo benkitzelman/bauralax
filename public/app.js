@@ -16377,7 +16377,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, Path, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, LevelSelect, Menu, Path, Scene, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
     slice = [].slice,
@@ -16894,7 +16894,7 @@ Quintus.UI = function(Q) {
         return function() {
           _this.Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json");
           _this.configureAnimations();
-          _this.startingStage();
+          LevelSelect.load();
           return Game.started.resolveWith(_this);
         };
       })(this));
@@ -18046,8 +18046,10 @@ Quintus.UI = function(Q) {
     }
   });
 
-  Stage = (function() {
-    Stage.register = function(cb) {
+  Scene = (function() {
+    function Scene() {}
+
+    Scene.register = function(cb) {
       if (this.instance) {
         return;
       }
@@ -18059,9 +18061,37 @@ Quintus.UI = function(Q) {
       })(this));
     };
 
-    Stage.load = function() {
+    Scene.load = function() {
       return Q.stageScene(this.name);
     };
+
+    return Scene;
+
+  })();
+
+  Menu = (function(superClass) {
+    extend(Menu, superClass);
+
+    Menu.type = 'menu';
+
+    function Menu(QStage) {
+      this.QStage = QStage;
+      if (typeof this.addBackground === "function") {
+        this.addBackground();
+      }
+      if (typeof this.addUI === "function") {
+        this.addUI();
+      }
+    }
+
+    return Menu;
+
+  })(Scene);
+
+  Stage = (function(superClass) {
+    extend(Stage, superClass);
+
+    Stage.type = 'game';
 
     function Stage(QStage) {
       this.QStage = QStage;
@@ -18180,7 +18210,7 @@ Quintus.UI = function(Q) {
 
     return Stage;
 
-  })();
+  })(Scene);
 
   StageDebug = (function(superClass) {
     extend(StageDebug, superClass);
@@ -18220,15 +18250,73 @@ Quintus.UI = function(Q) {
 
   })(Stage);
 
+  LevelSelect = (function(superClass) {
+    extend(LevelSelect, superClass);
+
+    function LevelSelect() {
+      return LevelSelect.__super__.constructor.apply(this, arguments);
+    }
+
+    LevelSelect.register();
+
+    LevelSelect.prototype.addUI = function() {
+      var button, label;
+      this.container = this.QStage.insert(new Q.UI.Container({
+        x: Q.width / 2,
+        y: Q.height / 2,
+        fill: "rgba(0,0,0,0.5)"
+      }));
+      label = new Q.UI.Text({
+        x: 0,
+        y: 0,
+        color: "#CCCCCC",
+        label: "Bauralax"
+      });
+      button = new Q.UI.Button({
+        x: 0,
+        y: 50,
+        fill: "#CCCCCC",
+        label: "Level 1"
+      });
+      button.on("click", this, 'onTryAgain');
+      this.container.insert(label);
+      _.each(Game.instance.stages(), (function(_this) {
+        return function(stage, i) {
+          var handler, y;
+          y = (i * 50) + 50;
+          button = new Q.UI.Button({
+            x: 0,
+            y: y,
+            fill: "#CCCCCC",
+            label: stage.name
+          });
+          handler = _this.onLoadStage.bind(_this, stage);
+          button.on("click", handler);
+          return _this.container.insert(button);
+        };
+      })(this));
+      return this.container.fit(50);
+    };
+
+    LevelSelect.prototype.onLoadStage = function(stage) {
+      return stage.load();
+    };
+
+    return LevelSelect;
+
+  })(Menu);
+
   StageLostGame = (function(superClass) {
     extend(StageLostGame, superClass);
 
+    function StageLostGame() {
+      return StageLostGame.__super__.constructor.apply(this, arguments);
+    }
+
     StageLostGame.register();
 
-    function StageLostGame(QStage) {
+    StageLostGame.prototype.addUI = function() {
       var button, label;
-      this.QStage = QStage;
-      this.setupStage();
       this.container = this.QStage.insert(new Q.UI.Container({
         x: Q.width / 2,
         y: Q.height / 2,
@@ -18249,11 +18337,7 @@ Quintus.UI = function(Q) {
       button.on("click", this, 'onTryAgain');
       this.container.insert(label);
       this.container.insert(button);
-      this.container.fit(50);
-    }
-
-    StageLostGame.prototype.autoScale = function() {
-      return 1;
+      return this.container.fit(50);
     };
 
     StageLostGame.prototype.onTryAgain = function() {
@@ -18262,7 +18346,7 @@ Quintus.UI = function(Q) {
 
     return StageLostGame;
 
-  })(Stage);
+  })(Menu);
 
   StageOne = (function(superClass) {
     extend(StageOne, superClass);
@@ -18372,12 +18456,14 @@ Quintus.UI = function(Q) {
   StageWonGame = (function(superClass) {
     extend(StageWonGame, superClass);
 
+    function StageWonGame() {
+      return StageWonGame.__super__.constructor.apply(this, arguments);
+    }
+
     StageWonGame.register();
 
-    function StageWonGame(QStage) {
+    StageWonGame.prototype.addUI = function() {
       var againBtn, label, nextBtn;
-      this.QStage = QStage;
-      this.setupStage();
       this.container = this.QStage.insert(new Q.UI.Container({
         x: Q.width / 2,
         y: Q.height / 2,
@@ -18408,11 +18494,7 @@ Quintus.UI = function(Q) {
         againBtn.on("click", this, 'onPlayAgain');
         this.container.insert(againBtn);
       }
-      this.container.fit(100);
-    }
-
-    StageWonGame.prototype.autoScale = function() {
-      return 1;
+      return this.container.fit(100);
     };
 
     StageWonGame.prototype.onPlayAgain = function() {
@@ -18425,6 +18507,6 @@ Quintus.UI = function(Q) {
 
     return StageWonGame;
 
-  })(Stage);
+  })(Menu);
 
 }).call(this);

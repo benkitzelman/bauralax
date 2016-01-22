@@ -89,7 +89,7 @@ class Game
       @Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json")
       @configureAnimations()
       # Finally, call stageScene to run the game
-      @startingStage()
+      LevelSelect.load()
       Game.started.resolveWith this
 
   configureAnimations: ->
