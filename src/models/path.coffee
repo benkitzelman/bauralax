@@ -29,3 +29,6 @@ class Path
 
   set: (targets = []) ->
     @items = _.map targets, Target.parse
+
+  clear: ->
+    @items = []

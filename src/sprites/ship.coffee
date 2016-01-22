@@ -6,8 +6,8 @@ Q.Sprite.extend "Ship",
       team         : Team.NONE
       collisions   : false
       asset        : 'ship.png'
-      maxSpeed     : 30
-      acceleration : 10
+      maxSpeed     : 15
+      acceleration : 5
       angle        : 90
       scale        : 0.75
       opacity      : 1
@@ -92,6 +92,7 @@ Q.Sprite.extend "Ship",
     Math.abs(@p.x - x) < 1 and Math.abs(@p.y - y) < 1
 
   stop: ->
+    @p.path.clear()
     @p.vy = @p.vx = 0
 
   onReachedTarget: (target) ->

@@ -16377,7 +16377,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, LevelSelect, Menu, Path, Scene, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, LevelSelect, Menu, Path, Scene, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
     slice = [].slice,
@@ -16437,12 +16437,66 @@ Quintus.UI = function(Q) {
     };
   };
 
+  Quintus.Util = function(Q) {
+    Q.center = function() {
+      return {
+        x: Q.width / 2,
+        y: Q.height / 2
+      };
+    };
+    Q.insideViewport = function(entity) {
+      var points, stage;
+      stage = Q.stage();
+      points = [
+        {
+          x: Q.canvasToStageX(0, stage),
+          y: Q.canvasToStageY(0, stage)
+        }, {
+          x: Q.canvasToStageX(Q.width, stage),
+          y: Q.canvasToStageY(0, stage)
+        }, {
+          x: Q.canvasToStageX(Q.width, stage),
+          y: Q.canvasToStageY(Q.height, stage)
+        }, {
+          x: Q.canvasToStageX(0, stage),
+          y: Q.canvasToStageY(Q.height, stage)
+        }
+      ];
+      return Q.insidePolygon(points, entity.p);
+    };
+    return Q.insidePolygon = function(points, p) {
+      var c, i, j, l, maxX, maxY, minX, minY, xs, ys;
+      xs = Q._map(points, function() {
+        return this.x;
+      });
+      minX = Math.min.apply(this, xs);
+      maxX = Math.max.apply(this, xs);
+      ys = Q._map(points, function() {
+        return this.y;
+      });
+      minY = Math.min.apply(this, ys);
+      maxY = Math.max.apply(this, ys);
+      if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) {
+        return false;
+      }
+      c = false;
+      i = -1;
+      l = points.length;
+      j = l - 1;
+      while (++i < l) {
+        ((points[i].y <= p.y && p.y < points[j].y) || (points[j].y <= p.y && p.y < points[i].y)) && (p.x < (points[j].x - points[i].x) * (p.y - points[i].y) / (points[j].y - points[i].y) + points[i].x) && (c = !c);
+        j = i;
+      }
+      return c;
+    };
+  };
+
   window.Q = Quintus({
     development: true,
     imagePath: "./assets/images/",
     audioPath: './assets/audio/',
     dataPath: './assets/images/'
-  }).include("Sprites, Anim, Math, Scenes, Input, 2D, Touch, UI, Audio").setup({
+  }).include("Sprites, Anim, Math, Util, Scenes, Input, 2D, Touch, UI, Audio").setup({
     maximize: true,
     scaleToFit: true
   }).touch().enableSound();
@@ -16548,15 +16602,20 @@ Quintus.UI = function(Q) {
       });
     },
     onCollision: function(collision) {
-      var hasAbsorbedOtherTeams, isEnemy, isReclaimingShip;
+      var hasAbsorbedOtherTeams, hasTargetedEntity, isAttackingEnemy, isEnemy, isReclaimingShip;
       isReclaimingShip = (function(_this) {
         return function() {
-          return collision.obj.isA("Ship") && _this.entity.teamResource.isTeammate(collision.obj) && collision.obj.currentTarget().hasTargeted(_this.entity);
+          return collision.obj.isA("Ship") && _this.entity.teamResource.isTeammate(collision.obj) && hasTargetedEntity();
         };
       })(this);
       hasAbsorbedOtherTeams = (function(_this) {
         return function() {
           return _this.absorber() && _this.entity.teamResource.val() !== _this.absorber();
+        };
+      })(this);
+      hasTargetedEntity = (function(_this) {
+        return function() {
+          return collision.obj.currentTarget().hasTargeted(_this.entity);
         };
       })(this);
       isEnemy = (function(_this) {
@@ -16565,10 +16624,15 @@ Quintus.UI = function(Q) {
           return !((ref = _this.entity.teamResource) != null ? ref.isTeammate(collision.obj) : void 0);
         };
       })(this);
+      isAttackingEnemy = (function(_this) {
+        return function() {
+          return isEnemy() && hasTargetedEntity();
+        };
+      })(this);
       if (collision.obj.isDestroyed) {
         return;
       }
-      if (isEnemy()) {
+      if (isAttackingEnemy()) {
         return this.absorb(collision.obj);
       }
       if (isReclaimingShip() && hasAbsorbedOtherTeams()) {
@@ -16844,7 +16908,7 @@ Quintus.UI = function(Q) {
     }
 
     Game.prototype.stages = function() {
-      return [StageDebug, StageOne, StageTwo];
+      return [StageDebug, StageOne, StageTwo, StageThree];
     };
 
     Game.prototype.isLastStage = function() {
@@ -16910,12 +16974,10 @@ Quintus.UI = function(Q) {
     };
 
     Game.prototype.startingStage = function() {
-      Q.clearStages();
       return _.first(this.stages()).load();
     };
 
     Game.prototype.replayLastStage = function() {
-      Q.clearStages();
       return this.stages()[this.currentLevelIdx].load();
     };
 
@@ -16980,6 +17042,10 @@ Quintus.UI = function(Q) {
         targets = [];
       }
       return this.items = _.map(targets, Target.parse);
+    };
+
+    Path.prototype.clear = function() {
+      return this.items = [];
     };
 
     return Path;
@@ -17576,7 +17642,7 @@ Quintus.UI = function(Q) {
         texture: 'planets/none/0.png',
         textureWidth: 550,
         frameX: -Q.random(0, Q.asset(texture).width),
-        spinSpeed: Q.random(1, 5) / 10,
+        spinSpeed: Q.random(1, 5) / 30,
         spinDirection: [1, -1][Q.random(0, 1)],
         scale: scale,
         team: Team.NONE,
@@ -17848,8 +17914,8 @@ Quintus.UI = function(Q) {
         team: Team.NONE,
         collisions: false,
         asset: 'ship.png',
-        maxSpeed: 30,
-        acceleration: 10,
+        maxSpeed: 15,
+        acceleration: 5,
         angle: 90,
         scale: 0.75,
         opacity: 1,
@@ -17933,6 +17999,7 @@ Quintus.UI = function(Q) {
       return Math.abs(this.p.x - x) < 1 && Math.abs(this.p.y - y) < 1;
     },
     stop: function() {
+      this.p.path.clear();
       return this.p.vy = this.p.vx = 0;
     },
     onReachedTarget: function(target) {
@@ -18062,6 +18129,7 @@ Quintus.UI = function(Q) {
     };
 
     Scene.load = function() {
+      Q.clearStages();
       return Q.stageScene(this.name);
     };
 
@@ -18128,30 +18196,29 @@ Quintus.UI = function(Q) {
     };
 
     Stage.prototype.setupStage = function() {
-      var coords, ref, ref1;
+      var ref, ref1, ref2, x, y;
       this.QStage.add("viewport");
       this.QStage.add("selectionControls");
-      this.QStage.viewport.scale = ((ref = this.viewport) != null ? ref.scale : void 0) || this.autoScale();
-      if (coords = (ref1 = this.viewport) != null ? ref1.coords : void 0) {
-        return this.QStage.centerOn(coords.x, coords.y);
-      }
+      ref1 = ((ref = this.viewport) != null ? ref.coords : void 0) || Q.center(), x = ref1.x, y = ref1.y;
+      this.QStage.viewport.centerOn(x, y);
+      return this.QStage.viewport.scale = ((ref2 = this.viewport) != null ? ref2.scale : void 0) || this.autoScale();
     };
 
     Stage.prototype.addBackground = function() {
-      var j, ref, results;
+      var k, ref, results;
       results = [];
-      for (j = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? j <= ref : j >= ref; 1 <= ref ? j++ : j--) {
+      for (k = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? k <= ref : k >= ref; 1 <= ref ? k++ : k--) {
         results.push(this.QStage.insert(new Q.Star));
       }
       return results;
     };
 
     Stage.prototype.addPlanets = function() {
-      var j, len, p, ref, results;
+      var k, len, p, ref, results;
       ref = this.planets;
       results = [];
-      for (j = 0, len = ref.length; j < len; j++) {
-        p = ref[j];
+      for (k = 0, len = ref.length; k < len; k++) {
+        p = ref[k];
         results.push(this.QStage.insert(new Q.Planet(p)));
       }
       return results;
@@ -18355,13 +18422,6 @@ Quintus.UI = function(Q) {
       return StageOne.__super__.constructor.apply(this, arguments);
     }
 
-    StageOne.prototype.viewport = {
-      coords: {
-        x: 350,
-        y: 350
-      }
-    };
-
     StageOne.prototype.planets = [
       {
         x: 200,
@@ -18405,13 +18465,6 @@ Quintus.UI = function(Q) {
       return StageTwo.__super__.constructor.apply(this, arguments);
     }
 
-    StageTwo.prototype.viewport = {
-      coords: {
-        x: 400,
-        y: 325
-      }
-    };
-
     StageTwo.prototype.planets = [
       {
         x: 200,
@@ -18450,6 +18503,63 @@ Quintus.UI = function(Q) {
     };
 
     return StageTwo;
+
+  })(Stage);
+
+  StageThree = (function(superClass) {
+    extend(StageThree, superClass);
+
+    function StageThree() {
+      return StageThree.__super__.constructor.apply(this, arguments);
+    }
+
+    StageThree.prototype.planets = [
+      {
+        x: 600,
+        y: 100,
+        startingShipCount: 50,
+        team: Team.RED
+      }, {
+        x: 600,
+        y: 400,
+        startingShipCount: 50,
+        team: Team.GREEN
+      }, {
+        x: 600,
+        y: 700,
+        startingShipCount: 50,
+        team: Team.BLUE
+      }, {
+        x: 400,
+        y: 250
+      }, {
+        x: 400,
+        y: 550
+      }, {
+        x: 200,
+        y: 400
+      }, {
+        x: 800,
+        y: 250
+      }, {
+        x: 800,
+        y: 550
+      }, {
+        x: 1000,
+        y: 400
+      }
+    ];
+
+    StageThree.prototype.enemyStrategem = {
+      RED: {
+        strategy: AggressiveTeam
+      },
+      BLUE: {
+        strategy: AggressiveTeam
+      }
+    };
+
+    return StageThree;
 
   })(Stage);
 

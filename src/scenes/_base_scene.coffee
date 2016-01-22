@@ -6,5 +6,6 @@ class Scene
       cb?( stage )
 
   @load: ->
+    Q.clearStages()
     Q.stageScene @name
 

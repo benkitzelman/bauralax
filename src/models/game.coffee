@@ -56,6 +56,7 @@ class Game
       StageDebug
       StageOne
       StageTwo
+      StageThree
     ]
 
   isLastStage: ->
@@ -99,9 +100,7 @@ class Game
         rate: 1/15
 
   startingStage: ->
-    Q.clearStages()
     _.first( @stages() ).load()
 
   replayLastStage: ->
-    Q.clearStages()
     @stages()[ @currentLevelIdx ].load()

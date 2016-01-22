@@ -28,8 +28,10 @@ class Stage extends Scene
     @QStage.add "viewport"
     @QStage.add "selectionControls"
 
+    { x, y } = @viewport?.coords or Q.center()
+    @QStage.viewport.centerOn x, y
     @QStage.viewport.scale = @viewport?.scale or @autoScale()
-    @QStage.centerOn(coords.x, coords.y) if coords = @viewport?.coords
+
     # @QStage.collide = (obj, options) ->
 
   addBackground: ->
