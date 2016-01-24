@@ -1,13 +1,13 @@
 class AggressiveTeam extends TeamStrategy
   step: ->
-    @team.attackGroupSize ?= Q.random 8, 65
+    @team.attackGroupStrength ?= Q.random 8, 65
     _.each @ownPlanets(), (planet) =>
       shipGroup = @idleShipsFrom( planet )
-      return unless shipGroup.length() >= @team.attackGroupSize
+      return unless shipGroup.hitPoints() >= @team.attackGroupStrength
 
       shipGroup.moveNext @bestTargetFor( planet )
       shipGroup.reset() # reset to refill
-      delete @team.attackGroupSize
+      delete @team.attackGroupStrength
 
   idleShipsFrom: (planet) ->
     new ShipGroup( super( planet ) )

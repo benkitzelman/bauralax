@@ -34,14 +34,14 @@ class Stage extends Scene
 
     # @QStage.collide = (obj, options) ->
 
-  addBackground: ->
+  addBackground: =>
     @QStage.insert(new Q.Star) for [1..(Q.width * Q.height / 10000)]
 
-  addPlanets: ->
+  addPlanets: =>
     for p in @planets
       @QStage.insert new Q.Planet(p)
 
-  applyStrategy: ->
+  applyStrategy: =>
     for teamName, conf of (@enemyStrategem or {})
       Team[ teamName ]?.useStrategy conf.strategy
 
@@ -49,7 +49,7 @@ class Stage extends Scene
       for teamName, conf of (@enemyStrategem or {})
         Team[ teamName ].step( dt )
 
-  transitionTo: (Stage) ->
+  transitionTo: (Stage) =>
     fadeables = Q.select('Planet').items.concat Q.select('Star').items
     @QStage.on 'step', (dt) =>
       _.each fadeables, (sprite) ->

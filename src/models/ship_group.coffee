@@ -12,6 +12,9 @@ class ShipGroup extends Collection
     else
       @_state or 'waiting'
 
+  hitPoints: ->
+    _.reduce @items, ((hitPoints, ship) -> hitPoints += ship.p.hitPoints), 0
+
   remove: (ships = []) =>
     @unbindShipEvents ships
     super ships

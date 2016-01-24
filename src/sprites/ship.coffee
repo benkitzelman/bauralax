@@ -1,3 +1,5 @@
+MAX_HIT_POINTS = 50
+
 Q.Sprite.extend "Ship",
   init: (p) ->
     @_super _.defaults p,
@@ -6,8 +8,10 @@ Q.Sprite.extend "Ship",
       team         : Team.NONE
       collisions   : false
       asset        : 'ship.png'
-      maxSpeed     : 15
-      acceleration : 5
+      radius       : 1
+      hitPoints    : 1
+      maxSpeed     : 25
+      acceleration : 8
       angle        : 90
       scale        : 0.75
       opacity      : 1
@@ -24,6 +28,9 @@ Q.Sprite.extend "Ship",
 
     @on "hit.sprite", @, 'onCollision'
 
+  shipRadius: ->
+    @p.radius * @p.hitPoints
+
   draw: (ctx) ->
     @drawShip ctx
     @drawTeamColour ctx
@@ -35,7 +42,7 @@ Q.Sprite.extend "Ship",
     ctx.globalCompositeOperation = 'source-over'
     ctx.beginPath()
     ctx.fillStyle = "white"
-    ctx.arc 0, 0, 1, 0, 180
+    ctx.arc 0, 0, @shipRadius(), 0, 180
     ctx.fill()
     ctx.closePath()
     ctx.restore()
@@ -46,25 +53,27 @@ Q.Sprite.extend "Ship",
 
     ctx.beginPath()
     ctx.fillStyle = @teamResource.val().color 0.15
-    ctx.arc 0, 0, @p.w / 2, 0, 180
+    ctx.arc 0, 0, @shipRadius(), 0, 180
     ctx.fill()
 
     ctx.restore()
 
   drawHaze: (ctx) ->
+    alpha  = 0.05 * @p.hitPoints
+    radius = @shipRadius() + _.max [ 10, @p.hitPoints ]
 
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
 
     ctx.beginPath()
-    ctx.fillStyle = @teamResource.val().color 0.05
-    ctx.arc 0, 0, @p.w + 10, 0, 180
+    ctx.fillStyle = @teamResource.val().color( alpha )
+    ctx.arc 0, 0, radius, 0, 180
     ctx.fill()
 
     ctx.restore()
 
   drawSelectionMarker: (ctx) ->
-    radius = 5
+    radius = @shipRadius() + 4
 
     ctx.save()
 
@@ -154,6 +163,19 @@ Q.Sprite.extend "Ship",
   absorb: ->
     @explode()
 
+  damageWith: (sprite) ->
+    hp      = @p.hitPoints
+    enemyHp = sprite.p.hitPoints
+
+    @p.hitPoints       = _.max [ 0, hp - enemyHp ]
+    sprite.p.hitPoints = _.max [ 0, enemyHp - hp ]
+
+    if @p.hitPoints is 0
+      @explode sprite.teamResource?().val().color(0.75)
+
+    if sprite.p.hitPoints is 0
+      sprite.destroy()
+
   explode: (color)->
     @stage.insert new Q.Explosion
       x     : @p.x
@@ -166,9 +188,30 @@ Q.Sprite.extend "Ship",
     Q.audio.play 'ship_explosion.mp3'
     @destroy()
 
+  absorbFriend: ( friend ) ->
+    @p.absorptionValue = @p.hitPoints = _.min [ @p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS ]
+    friend.destroy()
+
+  wantsToGrow: ->
+    chances = =>
+      Math.pow 1000, @p.hitPoints
+
+    return false if @p.hitPoints >= MAX_HIT_POINTS
+    Q.random(0, chances()) is 1
+
   onCollision: (collision) ->
+    return if collision.obj?.isDestroyed
+    return unless @teamResource.isTeamResource( collision.obj )
+
     isEnemyShip = =>
       collision.obj.isA("Ship") and not @teamResource.isTeammate( collision.obj )
 
-    return unless @teamResource.isTeamResource( collision.obj )
-    @explode( collision.obj.teamResource?().val().color(0.75) ) if isEnemyShip()
+    isFriendlyShip = =>
+      collision.obj.isA("Ship") and @teamResource.isTeammate( collision.obj )
+
+    canAbsorb = =>
+      isFriendlyShip() and @wantsToGrow()
+
+    return @damageWith( collision.obj )   if isEnemyShip()
+    return @absorbFriend( collision.obj ) if canAbsorb()
+

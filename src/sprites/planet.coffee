@@ -8,7 +8,7 @@ Q.Sprite.extend "Planet",
       asset            : "planets/planet0.png"
       texture          : 'planets/none/0.png'
       textureWidth     : 550
-      frameX           : -Q.random( 0, Q.asset( texture ).width )
+      frameX           : -Q.random( 50, Q.asset( texture ).width )
       spinSpeed        : Q.random(1, 5) / 30
       spinDirection    : [ 1, -1 ][ Q.random 0, 1 ]
       scale            : scale

@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-01-22
+/*! bauralux - v1.0.0 - 2016-01-24
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -16377,7 +16377,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, LevelSelect, Menu, Path, Scene, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, LevelSelect, MAX_HIT_POINTS, Menu, Path, Scene, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
     slice = [].slice,
@@ -17087,6 +17087,12 @@ Quintus.UI = function(Q) {
       }
     };
 
+    ShipGroup.prototype.hitPoints = function() {
+      return _.reduce(this.items, (function(hitPoints, ship) {
+        return hitPoints += ship.p.hitPoints;
+      }), 0);
+    };
+
     ShipGroup.prototype.remove = function(ships) {
       if (ships == null) {
         ships = [];
@@ -17300,19 +17306,19 @@ Quintus.UI = function(Q) {
 
     AggressiveTeam.prototype.step = function() {
       var base;
-      if ((base = this.team).attackGroupSize == null) {
-        base.attackGroupSize = Q.random(8, 65);
+      if ((base = this.team).attackGroupStrength == null) {
+        base.attackGroupStrength = Q.random(8, 65);
       }
       return _.each(this.ownPlanets(), (function(_this) {
         return function(planet) {
           var shipGroup;
           shipGroup = _this.idleShipsFrom(planet);
-          if (!(shipGroup.length() >= _this.team.attackGroupSize)) {
+          if (!(shipGroup.hitPoints() >= _this.team.attackGroupStrength)) {
             return;
           }
           shipGroup.moveNext(_this.bestTargetFor(planet));
           shipGroup.reset();
-          return delete _this.team.attackGroupSize;
+          return delete _this.team.attackGroupStrength;
         };
       })(this));
     };
@@ -17641,7 +17647,7 @@ Quintus.UI = function(Q) {
         asset: "planets/planet0.png",
         texture: 'planets/none/0.png',
         textureWidth: 550,
-        frameX: -Q.random(0, Q.asset(texture).width),
+        frameX: -Q.random(50, Q.asset(texture).width),
         spinSpeed: Q.random(1, 5) / 30,
         spinDirection: [1, -1][Q.random(0, 1)],
         scale: scale,
@@ -17906,6 +17912,8 @@ Quintus.UI = function(Q) {
     }
   });
 
+  MAX_HIT_POINTS = 50;
+
   Q.Sprite.extend("Ship", {
     init: function(p) {
       this._super(_.defaults(p, {
@@ -17914,8 +17922,10 @@ Quintus.UI = function(Q) {
         team: Team.NONE,
         collisions: false,
         asset: 'ship.png',
-        maxSpeed: 15,
-        acceleration: 5,
+        radius: 1,
+        hitPoints: 1,
+        maxSpeed: 25,
+        acceleration: 8,
         angle: 90,
         scale: 0.75,
         opacity: 1,
@@ -17932,6 +17942,9 @@ Quintus.UI = function(Q) {
       this.add('absorbable');
       return this.on("hit.sprite", this, 'onCollision');
     },
+    shipRadius: function() {
+      return this.p.radius * this.p.hitPoints;
+    },
     draw: function(ctx) {
       this.drawShip(ctx);
       this.drawTeamColour(ctx);
@@ -17945,7 +17958,7 @@ Quintus.UI = function(Q) {
       ctx.globalCompositeOperation = 'source-over';
       ctx.beginPath();
       ctx.fillStyle = "white";
-      ctx.arc(0, 0, 1, 0, 180);
+      ctx.arc(0, 0, this.shipRadius(), 0, 180);
       ctx.fill();
       ctx.closePath();
       return ctx.restore();
@@ -17955,22 +17968,25 @@ Quintus.UI = function(Q) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
       ctx.fillStyle = this.teamResource.val().color(0.15);
-      ctx.arc(0, 0, this.p.w / 2, 0, 180);
+      ctx.arc(0, 0, this.shipRadius(), 0, 180);
       ctx.fill();
       return ctx.restore();
     },
     drawHaze: function(ctx) {
+      var alpha, radius;
+      alpha = 0.05 * this.p.hitPoints;
+      radius = this.shipRadius() + _.max([10, this.p.hitPoints]);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
-      ctx.fillStyle = this.teamResource.val().color(0.05);
-      ctx.arc(0, 0, this.p.w + 10, 0, 180);
+      ctx.fillStyle = this.teamResource.val().color(alpha);
+      ctx.arc(0, 0, radius, 0, 180);
       ctx.fill();
       return ctx.restore();
     },
     drawSelectionMarker: function(ctx) {
       var radius;
-      radius = 5;
+      radius = this.shipRadius() + 4;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
@@ -18073,6 +18089,19 @@ Quintus.UI = function(Q) {
     absorb: function() {
       return this.explode();
     },
+    damageWith: function(sprite) {
+      var enemyHp, hp;
+      hp = this.p.hitPoints;
+      enemyHp = sprite.p.hitPoints;
+      this.p.hitPoints = _.max([0, hp - enemyHp]);
+      sprite.p.hitPoints = _.max([0, enemyHp - hp]);
+      if (this.p.hitPoints === 0) {
+        this.explode(typeof sprite.teamResource === "function" ? sprite.teamResource().val().color(0.75) : void 0);
+      }
+      if (sprite.p.hitPoints === 0) {
+        return sprite.destroy();
+      }
+    },
     explode: function(color) {
       this.stage.insert(new Q.Explosion({
         x: this.p.x,
@@ -18085,18 +18114,50 @@ Quintus.UI = function(Q) {
       Q.audio.play('ship_explosion.mp3');
       return this.destroy();
     },
+    absorbFriend: function(friend) {
+      this.p.absorptionValue = this.p.hitPoints = _.min([this.p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS]);
+      return friend.destroy();
+    },
+    wantsToGrow: function() {
+      var chances;
+      chances = (function(_this) {
+        return function() {
+          return Math.pow(1000, _this.p.hitPoints);
+        };
+      })(this);
+      if (this.p.hitPoints >= MAX_HIT_POINTS) {
+        return false;
+      }
+      return Q.random(0, chances()) === 1;
+    },
     onCollision: function(collision) {
-      var base, isEnemyShip;
+      var canAbsorb, isEnemyShip, isFriendlyShip, ref;
+      if ((ref = collision.obj) != null ? ref.isDestroyed : void 0) {
+        return;
+      }
+      if (!this.teamResource.isTeamResource(collision.obj)) {
+        return;
+      }
       isEnemyShip = (function(_this) {
         return function() {
           return collision.obj.isA("Ship") && !_this.teamResource.isTeammate(collision.obj);
         };
       })(this);
-      if (!this.teamResource.isTeamResource(collision.obj)) {
-        return;
-      }
+      isFriendlyShip = (function(_this) {
+        return function() {
+          return collision.obj.isA("Ship") && _this.teamResource.isTeammate(collision.obj);
+        };
+      })(this);
+      canAbsorb = (function(_this) {
+        return function() {
+          return isFriendlyShip() && _this.wantsToGrow();
+        };
+      })(this);
       if (isEnemyShip()) {
-        return this.explode(typeof (base = collision.obj).teamResource === "function" ? base.teamResource().val().color(0.75) : void 0);
+        return this.damageWith(collision.obj);
+      }
+      if (canAbsorb()) {
+        return this.absorbFriend(collision.obj);
       }
     }
   });
@@ -18163,6 +18224,10 @@ Quintus.UI = function(Q) {
 
     function Stage(QStage) {
       this.QStage = QStage;
+      this.transitionTo = bind(this.transitionTo, this);
+      this.applyStrategy = bind(this.applyStrategy, this);
+      this.addPlanets = bind(this.addPlanets, this);
+      this.addBackground = bind(this.addBackground, this);
       this.setupStage();
       this.applyStrategy();
       this.addBackground();
@@ -18297,7 +18362,7 @@ Quintus.UI = function(Q) {
       {
         x: 500,
         y: 200,
-        startingShipCount: 0,
+        startingShipCount: 1,
         team: Team.BLUE
       }, {
         x: 500,
