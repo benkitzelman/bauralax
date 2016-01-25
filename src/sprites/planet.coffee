@@ -48,8 +48,16 @@ Q.Sprite.extend "Planet",
 
     ctx.globalCompositeOperation = 'lighter'
     ctx.beginPath()
-    ctx.fillStyle = @teamResource.val().color(0.18  )
-    ctx.arc(0, 0, @radius(), 0, 180)
+
+    outerRadius = @radius() + 30
+    innerRadius = @radius() - 30
+
+    gradient = ctx.createRadialGradient 0, 0, outerRadius, 0, 0, @radius()
+    gradient.addColorStop 0, "transparent"
+    gradient.addColorStop 1, @teamResource.val().color(0.3)
+
+    ctx.fillStyle = gradient
+    ctx.arc(0, 0, outerRadius, 0, 180)
     ctx.fill()
 
     ctx.restore()
@@ -96,7 +104,7 @@ Q.Sprite.extend "Planet",
       ctx.drawImage texture, @p.frameX, -texture.height / 2
 
       if @p.frameX <= textureEdgeX + diameter
-        joinX = @p.frameX + texture.width
+        joinX = @p.frameX + texture.width - 1
         ctx.drawImage texture, joinX, -texture.height / 2
     #--
 

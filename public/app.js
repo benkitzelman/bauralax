@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-01-24
+/*! bauralux - v1.0.0 - 2016-01-25
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -17685,11 +17685,17 @@ Quintus.UI = function(Q) {
       return this.drawTeamColors(ctx);
     },
     drawTeamColors: function(ctx) {
+      var gradient, innerRadius, outerRadius;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
-      ctx.fillStyle = this.teamResource.val().color(0.18);
-      ctx.arc(0, 0, this.radius(), 0, 180);
+      outerRadius = this.radius() + 30;
+      innerRadius = this.radius() - 30;
+      gradient = ctx.createRadialGradient(0, 0, outerRadius, 0, 0, this.radius());
+      gradient.addColorStop(0, "transparent");
+      gradient.addColorStop(1, this.teamResource.val().color(0.3));
+      ctx.fillStyle = gradient;
+      ctx.arc(0, 0, outerRadius, 0, 180);
       ctx.fill();
       return ctx.restore();
     },
@@ -17733,7 +17739,7 @@ Quintus.UI = function(Q) {
           ctx.globalAlpha = 1;
           ctx.drawImage(texture, _this.p.frameX, -texture.height / 2);
           if (_this.p.frameX <= textureEdgeX + diameter) {
-            joinX = _this.p.frameX + texture.width;
+            joinX = _this.p.frameX + texture.width - 1;
             return ctx.drawImage(texture, joinX, -texture.height / 2);
           }
         };
@@ -17973,14 +17979,17 @@ Quintus.UI = function(Q) {
       return ctx.restore();
     },
     drawHaze: function(ctx) {
-      var alpha, radius;
-      alpha = 0.05 * this.p.hitPoints;
-      radius = this.shipRadius() + _.max([10, this.p.hitPoints]);
+      var alpha, gradient, outerRadius;
+      alpha = 0.07 * this.p.hitPoints;
+      outerRadius = this.shipRadius() + _.max([20, this.p.hitPoints * 3]);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
-      ctx.fillStyle = this.teamResource.val().color(alpha);
-      ctx.arc(0, 0, radius, 0, 180);
+      gradient = ctx.createRadialGradient(0, 0, outerRadius, 0, 0, this.shipRadius());
+      gradient.addColorStop(0, "transparent");
+      gradient.addColorStop(1, this.teamResource.val().color(alpha));
+      ctx.fillStyle = gradient;
+      ctx.arc(0, 0, outerRadius, 0, 180);
       ctx.fill();
       return ctx.restore();
     },

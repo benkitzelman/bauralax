@@ -52,6 +52,7 @@ Q.Sprite.extend "Ship",
     ctx.globalCompositeOperation = 'lighter'
 
     ctx.beginPath()
+
     ctx.fillStyle = @teamResource.val().color 0.15
     ctx.arc 0, 0, @shipRadius(), 0, 180
     ctx.fill()
@@ -59,15 +60,20 @@ Q.Sprite.extend "Ship",
     ctx.restore()
 
   drawHaze: (ctx) ->
-    alpha  = 0.05 * @p.hitPoints
-    radius = @shipRadius() + _.max [ 10, @p.hitPoints ]
+    alpha       = 0.07 * @p.hitPoints
+    outerRadius = @shipRadius() + _.max [ 20, @p.hitPoints * 3 ]
 
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
 
     ctx.beginPath()
-    ctx.fillStyle = @teamResource.val().color( alpha )
-    ctx.arc 0, 0, radius, 0, 180
+
+    gradient = ctx.createRadialGradient 0, 0, outerRadius, 0, 0, @shipRadius()
+    gradient.addColorStop 0, "transparent"
+    gradient.addColorStop 1, @teamResource.val().color(alpha)
+
+    ctx.fillStyle = gradient
+    ctx.arc 0, 0, outerRadius, 0, 180
     ctx.fill()
 
     ctx.restore()
