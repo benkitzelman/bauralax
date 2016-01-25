@@ -36,3 +36,7 @@ Quintus.Util = (Q) ->
       ((points[i].y <= p.y and p.y < points[j].y) or (points[j].y <= p.y and p.y < points[i].y)) and (p.x < (points[j].x - points[i].x) * (p.y - points[i].y) / (points[j].y - points[i].y) + points[i].x) and (c = not c)
       j = i
     c
+
+  Q.colorString = (rgba) ->
+    alpha = rgba.pop()
+    "rgba(#{ rgba.join(',') }, #{alpha})"

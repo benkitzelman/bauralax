@@ -16464,7 +16464,7 @@ Quintus.UI = function(Q) {
       ];
       return Q.insidePolygon(points, entity.p);
     };
-    return Q.insidePolygon = function(points, p) {
+    Q.insidePolygon = function(points, p) {
       var c, i, j, l, maxX, maxY, minX, minY, xs, ys;
       xs = Q._map(points, function() {
         return this.x;
@@ -16488,6 +16488,11 @@ Quintus.UI = function(Q) {
         j = i;
       }
       return c;
+    };
+    return Q.colorString = function(rgba) {
+      var alpha;
+      alpha = rgba.pop();
+      return "rgba(" + (rgba.join(',')) + ", " + alpha + ")";
     };
   };
 
@@ -16879,7 +16884,7 @@ Quintus.UI = function(Q) {
   })(Q.Evented);
 
   Game = (function() {
-    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_explosion.mp3"];
+    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_explosion.mp3"];
 
     Game.unitCap = 450;
 
@@ -17571,6 +17576,28 @@ Quintus.UI = function(Q) {
 
   })(Q.Evented);
 
+  Q.Sprite.extend('Background', {
+    init: function(p) {
+      return this._super(p, {
+        asset: 'planets/nebula/blue.png',
+        w: Q.width,
+        h: Q.height,
+        type: Q.SPRITE_PARTICLE,
+        opacity: 0.15,
+        scale: 4
+      });
+    },
+    draw: function(ctx) {
+      var x, y;
+      ctx.save();
+      ctx.globalAlpha = this.p.opacity;
+      x = this.asset().width / 2 * -1;
+      y = this.asset().height / 2 * -1;
+      ctx.drawImage(this.asset(), x, y, this.p.w, this.p.h);
+      return ctx.restore();
+    }
+  });
+
   Q.Sprite.extend('Explosion', {
     init: function(p) {
       this._super(Q._extend({
@@ -18173,13 +18200,38 @@ Quintus.UI = function(Q) {
 
   Q.Sprite.extend('Star', {
     init: function(p) {
-      return this._super(p, {
+      this._super(p, {
         x: Math.random() * Q.width,
         y: Math.random() * Q.height,
         scale: Math.max(Math.random(), .3),
-        asset: 'star.png',
+        w: 5,
+        h: 5,
         type: Q.SPRITE_PARTICLE
       });
+      return this.p.starColor = Q.random(0, 10) === 1 ? this.randomColor() : Q.colorString([255, 255, 255, 0.5]);
+    },
+    randomColor: function() {
+      var colors;
+      colors = [[245, 85, 10, 0.75], [200, 200, 10, 0.75], [116, 206, 245, 0.75]].map(Q.colorString);
+      return colors[Q.random(0, colors.length - 1)];
+    },
+    draw: function() {
+      var args, ctx, gradient, radius;
+      ctx = arguments[0], args = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+      if (!this.p.starColor) {
+        return;
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath();
+      radius = this.p.w / 2;
+      gradient = ctx.createRadialGradient(0, 0, radius, 0, 0, 1);
+      gradient.addColorStop(0, "transparent");
+      gradient.addColorStop(1, this.p.starColor);
+      ctx.fillStyle = gradient;
+      ctx.arc(0, 0, this.p.w, 0, 180);
+      ctx.fill();
+      return ctx.restore();
     }
   });
 
@@ -18280,6 +18332,7 @@ Quintus.UI = function(Q) {
 
     Stage.prototype.addBackground = function() {
       var k, ref, results;
+      this.QStage.insert(new Q.Background);
       results = [];
       for (k = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? k <= ref : k >= ref; 1 <= ref ? k++ : k--) {
         results.push(this.QStage.insert(new Q.Star));

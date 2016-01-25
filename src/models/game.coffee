@@ -7,6 +7,8 @@ class Game
     "ship3.png"
     "shieldFlare.png"
 
+    "planets/nebula/blue.png"
+
     "planets/red/0.png"
     "planets/red/1.png"
     "planets/green/0.png"

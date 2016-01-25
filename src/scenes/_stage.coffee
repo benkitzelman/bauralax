@@ -35,6 +35,7 @@ class Stage extends Scene
     # @QStage.collide = (obj, options) ->
 
   addBackground: =>
+    @QStage.insert(new Q.Background)
     @QStage.insert(new Q.Star) for [1..(Q.width * Q.height / 10000)]
 
   addPlanets: =>
