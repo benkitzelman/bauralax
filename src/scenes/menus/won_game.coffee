@@ -24,4 +24,5 @@ class StageWonGame extends Menu
     Game.instance.startingStage()
 
   onNextLevel: ->
+    debugger
     Game.instance.nextStage()

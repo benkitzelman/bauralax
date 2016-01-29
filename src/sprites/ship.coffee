@@ -145,10 +145,6 @@ Q.Sprite.extend "Ship",
     xDistance       = Q.offsetX(targetAngle, stepDistance)
     yDistance       = Q.offsetY(targetAngle, stepDistance)
 
-    axis =
-      x: if targetAngle >= 180 then 1 else -1
-      y: if targetAngle >= 90 or targetAngle <= 270 then -1 else 1
-
     @p.angle = targetAngle
     @p.vx    = xDistance * Q.axis(targetAngle).x
     @p.vy    = yDistance * Q.axis(targetAngle).y

@@ -76,7 +76,7 @@ class Game
       Q.select('Planet')?.items
 
     hasWon = ->
-      _.all planets(), (p) -> p.teamResource.belongsToPlayer()
+      _.all planets(), (p) -> p.teamResource.belongsToPlayer() or p.teamResource.val() is Team.NONE
 
     hasLost = ->
       _.all planets(), (p) -> not p.teamResource.belongsToPlayer()

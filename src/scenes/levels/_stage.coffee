@@ -27,6 +27,8 @@ class Stage extends Scene
   setupStage: ->
     @QStage.add "viewport"
     @QStage.add "selectionControls"
+    Q.hammerTouchInput.on 'zoom-out', @onZoomOut
+    Q.hammerTouchInput.on 'zoom-in', @onZoomIn
 
     { x, y } = @viewport?.coords or Q.center()
     @QStage.viewport.centerOn x, y
@@ -67,3 +69,34 @@ class Stage extends Scene
         Q.clearStages()
         Stage.load()
       ), 1000
+
+  stepViewportTo: ({x, y}) ->
+    vX = @QStage.viewport.x
+    vY = @QStage.viewport.y
+
+    maxStepDistance = 20
+    targetAngle     = Q.angle vX, vY, x, y
+    tripDistance    = Q.distance vX, vY, x, y
+    stepDistance    = _.min [ tripDistance, maxStepDistance ] # step hypotenuse
+
+    xDistance       = Q.offsetX targetAngle, stepDistance
+    yDistance       = Q.offsetY targetAngle, stepDistance
+
+    coords =
+      x: ( xDistance * Q.axis( targetAngle ).x ) + x
+      y: ( yDistance * Q.axis( targetAngle ).y ) + y
+
+    @QStage.viewport.centerOn coords.x, coords.y
+
+  zoomIncrementFor: (velocity) ->
+    _.max [ 0.05, Math.abs( velocity ) ]
+
+  onZoomOut: (e) =>
+    console.log 'zoom-out'
+    @QStage.viewport.scale = _.max [ 0.4, @QStage.viewport.scale - @zoomIncrementFor( e.velocity ) ]
+    @stepViewportTo( center ) if center = e.initialCenter
+
+  onZoomIn: (e) =>
+    console.log 'zoom-in'
+    @QStage.viewport.scale = _.min [ 1.4, @QStage.viewport.scale + @zoomIncrementFor( e.velocity ) ]
+    @stepViewportTo( center ) if center = e.initialCenter

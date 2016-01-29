@@ -1,4 +1,8 @@
 class StageThree extends Stage
+  viewport:
+    coords : { x: 600, y: 400 }
+    scale  : 1
+
   planets: [
     # middle axis
     (x: 600, y: 100, startingShipCount: 50, team: Team.RED)

@@ -20,8 +20,8 @@ module.exports = (grunt) ->
           join: true
         files:
           'tmp/bauralux.js': [
-            './src/modules/*.coffee', './src/index.coffee', './src/components/*.coffee',
-            './src/models/**/*.coffee', './src/sprites/*.coffee', './src/scenes/*.coffee'
+            './src/modules/**/*.coffee', './src/index.coffee', './src/components/**/*.coffee',
+            './src/models/**/*.coffee', './src/sprites/**/*.coffee', './src/scenes/**/*.coffee'
           ]
 
     concat:
@@ -30,7 +30,7 @@ module.exports = (grunt) ->
         banner: '/*! <%= pkg.title || pkg.name %> - v<%= pkg.version %> - ' + '<%= grunt.template.today(\'yyyy-mm-dd\') %>\n' + '* Copyright (c) <%= grunt.template.today(\'yyyy\') %> <%= pkg.author.name %> */'
 
       build:
-        src: ['vendor/jquery-1.9.1.js', 'vendor/lodash.min.js', 'vendor/quadtree.min.js', 'vendor/quintus-all-mod.js', 'tmp/bauralux.js']
+        src: ['vendor/jquery-1.9.1.js', 'vendor/lodash.min.js', 'vendor/hammer.js', 'vendor/quintus-all-mod.js', 'tmp/bauralux.js']
         dest: 'public/app.js'
 
     watch:
