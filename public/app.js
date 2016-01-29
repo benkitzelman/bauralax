@@ -20321,22 +20321,23 @@ Quintus.UI = function(Q) {
 
   Q.Sprite.extend('Background', {
     init: function(p) {
-      return this._super(p, {
+      this._super(p, {
         asset: 'planets/nebula/blue.png',
+        x: 0,
+        y: 0,
         w: Q.width,
         h: Q.height,
         type: Q.SPRITE_PARTICLE,
-        opacity: 0.15,
+        opacity: 0.3,
         scale: 4
       });
+      this.p.x = this.asset().width * this.p.scale / 2 * -1;
+      return this.p.y = this.asset().height / 2 * -1;
     },
     draw: function(ctx) {
-      var x, y;
       ctx.save();
       ctx.globalAlpha = this.p.opacity;
-      x = this.asset().width / 2 * -1;
-      y = this.asset().height / 2 * -1;
-      ctx.drawImage(this.asset(), x, y, this.p.w, this.p.h);
+      ctx.drawImage(this.asset(), 0, 0, this.p.w, this.p.h);
       return ctx.restore();
     }
   });
@@ -20718,9 +20719,6 @@ Quintus.UI = function(Q) {
       this.add('absorbable');
       return this.on("hit.sprite", this, 'onCollision');
     },
-    shipRadius: function() {
-      return this.p.radius * this.p.hitPoints;
-    },
     draw: function(ctx) {
       this.drawShip(ctx);
       this.drawTeamColour(ctx);
@@ -20734,7 +20732,7 @@ Quintus.UI = function(Q) {
       ctx.globalCompositeOperation = 'source-over';
       ctx.beginPath();
       ctx.fillStyle = "white";
-      ctx.arc(0, 0, this.shipRadius(), 0, 180);
+      ctx.arc(0, 0, this.p.radius, 0, 180);
       ctx.fill();
       ctx.closePath();
       return ctx.restore();
@@ -20744,18 +20742,18 @@ Quintus.UI = function(Q) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
       ctx.fillStyle = this.teamResource.val().color(0.15);
-      ctx.arc(0, 0, this.shipRadius(), 0, 180);
+      ctx.arc(0, 0, this.p.radius, 0, 180);
       ctx.fill();
       return ctx.restore();
     },
     drawHaze: function(ctx) {
       var alpha, gradient, outerRadius;
       alpha = 0.07 * this.p.hitPoints;
-      outerRadius = this.shipRadius() + _.max([20, this.p.hitPoints * 3]);
+      outerRadius = this.p.radius + _.max([20, this.p.hitPoints * 3]);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
-      gradient = ctx.createRadialGradient(0, 0, outerRadius, 0, 0, this.shipRadius());
+      gradient = ctx.createRadialGradient(0, 0, outerRadius, 0, 0, this.p.radius);
       gradient.addColorStop(0, "transparent");
       gradient.addColorStop(1, this.teamResource.val().color(alpha));
       ctx.fillStyle = gradient;
@@ -20765,7 +20763,7 @@ Quintus.UI = function(Q) {
     },
     drawSelectionMarker: function(ctx) {
       var radius;
-      radius = this.shipRadius() + 4;
+      radius = this.p.radius + 4;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
@@ -20890,7 +20888,8 @@ Quintus.UI = function(Q) {
       return this.destroy();
     },
     absorbFriend: function(friend) {
-      this.p.absorptionValue = this.p.hitPoints = _.min([this.p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS]);
+      this.p.radius = this.p.absorptionValue = this.p.hitPoints = _.min([this.p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS]);
+      this.p.h = this.p.w = this.p.radius * 2;
       return friend.destroy();
     },
     wantsToGrow: function() {
@@ -21395,6 +21394,12 @@ Quintus.UI = function(Q) {
       }
     }
 
+    Menu.prototype.placeInCenter = function(element) {
+      element.p.x = Q.center().x;
+      element.p.y = Q.center().y - element.p.h / 2;
+      return console.log(Q.center(), element.p.w / 2, element.p.x);
+    };
+
     return Menu;
 
   })(Scene);
@@ -21411,8 +21416,6 @@ Quintus.UI = function(Q) {
     LevelSelect.prototype.addUI = function() {
       var button, label;
       this.container = this.QStage.insert(new Q.UI.Container({
-        x: Q.width / 2,
-        y: Q.height / 2,
         fill: "rgba(0,0,0,0.5)"
       }));
       label = new Q.UI.Text({
@@ -21444,7 +21447,8 @@ Quintus.UI = function(Q) {
           return _this.container.insert(button);
         };
       })(this));
-      return this.container.fit(50);
+      this.container.fit();
+      return this.placeInCenter(this.container);
     };
 
     LevelSelect.prototype.onLoadStage = function(stage) {
@@ -21546,7 +21550,6 @@ Quintus.UI = function(Q) {
     };
 
     StageWonGame.prototype.onNextLevel = function() {
-      debugger;
       return Game.instance.nextStage();
     };
 

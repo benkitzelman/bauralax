@@ -28,9 +28,6 @@ Q.Sprite.extend "Ship",
 
     @on "hit.sprite", @, 'onCollision'
 
-  shipRadius: ->
-    @p.radius * @p.hitPoints
-
   draw: (ctx) ->
     @drawShip ctx
     @drawTeamColour ctx
@@ -42,7 +39,7 @@ Q.Sprite.extend "Ship",
     ctx.globalCompositeOperation = 'source-over'
     ctx.beginPath()
     ctx.fillStyle = "white"
-    ctx.arc 0, 0, @shipRadius(), 0, 180
+    ctx.arc 0, 0, @p.radius, 0, 180
     ctx.fill()
     ctx.closePath()
     ctx.restore()
@@ -54,21 +51,21 @@ Q.Sprite.extend "Ship",
     ctx.beginPath()
 
     ctx.fillStyle = @teamResource.val().color 0.15
-    ctx.arc 0, 0, @shipRadius(), 0, 180
+    ctx.arc 0, 0, @p.radius, 0, 180
     ctx.fill()
 
     ctx.restore()
 
   drawHaze: (ctx) ->
     alpha       = 0.07 * @p.hitPoints
-    outerRadius = @shipRadius() + _.max [ 20, @p.hitPoints * 3 ]
+    outerRadius = @p.radius + _.max [ 20, @p.hitPoints * 3 ]
 
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
 
     ctx.beginPath()
 
-    gradient = ctx.createRadialGradient 0, 0, outerRadius, 0, 0, @shipRadius()
+    gradient = ctx.createRadialGradient 0, 0, outerRadius, 0, 0, @p.radius
     gradient.addColorStop 0, "transparent"
     gradient.addColorStop 1, @teamResource.val().color(alpha)
 
@@ -79,7 +76,7 @@ Q.Sprite.extend "Ship",
     ctx.restore()
 
   drawSelectionMarker: (ctx) ->
-    radius = @shipRadius() + 4
+    radius = @p.radius + 4
 
     ctx.save()
 
@@ -191,7 +188,8 @@ Q.Sprite.extend "Ship",
     @destroy()
 
   absorbFriend: ( friend ) ->
-    @p.absorptionValue = @p.hitPoints = _.min [ @p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS ]
+    @p.radius = @p.absorptionValue = @p.hitPoints = _.min [ @p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS ]
+    @p.h = @p.w = @p.radius * 2
     friend.destroy()
 
   wantsToGrow: ->

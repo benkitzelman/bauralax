@@ -3,7 +3,7 @@ class LevelSelect extends Menu
 
   addUI: ->
     @container = @QStage.insert( new Q.UI.Container
-      x: Q.width/2, y: Q.height/2, fill: "rgba(0,0,0,0.5)"
+      fill: "rgba(0,0,0,0.5)"
     )
 
     label  = new Q.UI.Text( x: 0, y: 0, color: "#CCCCCC", label: "Bauralax" )
@@ -19,7 +19,8 @@ class LevelSelect extends Menu
       button.on "click", handler
       @container.insert button
 
-    @container.fit 50
+    @container.fit()
+    @placeInCenter @container
 
   onLoadStage: (stage) ->
     stage.load()
