@@ -1,12 +1,12 @@
 Q.Sprite.extend "Planet",
   init: (p) ->
     scale   = _.max [0.6, (Math.ceil(Math.random() * 10) / 10)]
-    texture = 'planets/red/0.png'
+    texture = 'planets/none/0.png'
 
     @_super Q._extend
       sensor           : true
       asset            : "planets/planet0.png"
-      texture          : 'planets/none/0.png'
+      texture          : texture
       textureWidth     : 550
       frameX           : -Q.random( 50, Q.asset( texture ).width )
       spinSpeed        : Q.random(1, 5) / 30
@@ -40,8 +40,24 @@ Q.Sprite.extend "Planet",
     "planets/none/#{ asset }"
 
   draw: (ctx) ->
+    @drawNebula ctx
     @drawImage ctx
     @drawTeamColors ctx
+
+  drawNebula: (ctx) ->
+    path   = "planets/#{ @teamResource.val().name.toLowerCase() }/nebula_0.png"
+    nebula = Q.asset path
+    dim    = _.min([ nebula.width, nebula.height ]) * @p.scale * 2
+    xy     = dim / 2
+
+    ctx.save()
+
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.globalAlpha = 0.08
+
+    ctx.drawImage nebula, -xy, -xy, dim, dim
+
+    ctx.restore()
 
   drawTeamColors: (ctx) ->
     ctx.save()

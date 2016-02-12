@@ -27,6 +27,7 @@ Quintus.HammerTouch = (Q) ->
       @hammertime.on 'pinch', @onPinch
       @hammertime.on 'tap', @onTap
       @hammertime.on 'pan', @onPan
+      @hammertime.on 'press', @onPress
 
       Q.el.addEventListener 'scroll', @onScroll
 
@@ -34,6 +35,7 @@ Quintus.HammerTouch = (Q) ->
       @hammertime.off 'pinch', @onPinch
       @hammertime.off 'tap', @onTouch
       @hammertime.off 'pan', @offPan
+      @hammertime.off 'press', @onPress
 
       Q.el.removeEventListener 'scroll', @onScroll
 
@@ -62,7 +64,7 @@ Quintus.HammerTouch = (Q) ->
       evt.p.ox = evt.p.px = canvasX / Q.cssWidth * Q.width
       evt.p.oy = evt.p.py = canvasY / Q.cssHeight * Q.height
 
-      if stage.viewport
+      if stage?.viewport
         evt.p.px /= stage.viewport.scale
         evt.p.py /= stage.viewport.scale
         evt.p.px += stage.viewport.x
@@ -134,3 +136,10 @@ Quintus.HammerTouch = (Q) ->
 
     onScroll: (e) =>
       console.log 'scroll', e
+
+    onPress: (e) =>
+      touch = _.first( e.changedPointers or [ e ] )
+      pos   = @normalize touch
+      @trigger 'press', pos
+
+

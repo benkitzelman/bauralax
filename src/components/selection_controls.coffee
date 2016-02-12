@@ -7,6 +7,7 @@ Q.component 'selectionControls',
     @input.on 'touch-drag-change', @, 'drawSelection'
     @input.on 'touch-drag-end', @, 'removeSelection'
     @input.on 'touch', @, 'moveShips'
+    @input.on 'press', @, 'startBuildSite'
 
     @stage.on 'destroyed', @, 'destroy'
 
@@ -50,4 +51,9 @@ Q.component 'selectionControls',
     group.moveTo e.p
     group.invoke 'deselect'
     group.reset()
+
+  startBuildSite: (e) ->
+    return if ( group = @selections() ).isEmpty()
+    @stage.insert( site = new Q.BuildSite(x: e.p.x, y: e.p.y) )
+    site
 

@@ -8,6 +8,7 @@ class Game
     "shieldFlare.png"
 
     "planets/nebula/blue.png"
+    # "planets/nebula/green.png"
 
     "planets/red/0.png"
     "planets/red/1.png"
@@ -18,6 +19,11 @@ class Game
     "planets/none/0.png"
     "planets/none/1.png"
 
+    "planets/red/nebula_0.png"
+    "planets/green/nebula_0.png"
+    "planets/blue/nebula_0.png"
+    "planets/none/nebula_0.png"
+
     "planets/planet0.png"
     "planets/planet1.png"
     "planets/planet_sheet_0.png"
@@ -25,8 +31,6 @@ class Game
 
     "ship_explosion.mp3"
   ]
-
-  @unitCap: 450
 
   @start = ->
     @started ?= new $.Deferred
@@ -42,7 +46,6 @@ class Game
 
     @Q.gravityY   = 0
     @Q.gravityX   = 0
-    # @Q.debug      = true
     @Q.clearColor = "#000"
 
     @loadAssets()
@@ -55,14 +58,14 @@ class Game
 
   stages: ->
     [
-      StageDebug
       StageOne
       StageTwo
       StageThree
+      StageDebug
     ]
 
   isLastStage: ->
-    @stages()[ @currentLevelIdx + 1 ]?
+    !@stages()[ @currentLevelIdx + 1 ]
 
   nextStage: ->
     @currentLevelIdx ?= 0
@@ -83,7 +86,6 @@ class Game
 
     return @currentStage().transitionTo( StageWonGame  ) if hasWon()
     return @currentStage().transitionTo( StageLostGame ) if hasLost()
-    # continue
 
   loadAssets: ->
     _.invoke @stages(), 'register'
@@ -91,8 +93,7 @@ class Game
     @Q.load Game.assets.join(', '), =>
       @Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json")
       @configureAnimations()
-      # Finally, call stageScene to run the game
-      LevelSelect.load()
+      @mainMenu()
       Game.started.resolveWith this
 
   configureAnimations: ->
@@ -101,8 +102,18 @@ class Game
         frames: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
         rate: 1/15
 
+  viewport: ->
+    @currentStage()?.QStage.viewport
+
+  loadStage: (stage) ->
+    @currentLevelIdx = _.indexOf @stages(), stage
+    stage.load()
+
+  mainMenu: ->
+    LevelSelect.load()
+
   startingStage: ->
-    _.first( @stages() ).load()
+    @loadStage _.first( @stages() )
 
   replayLastStage: ->
-    @stages()[ @currentLevelIdx ].load()
+    @loadStage @stages()[ @currentLevelIdx ]

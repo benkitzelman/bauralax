@@ -23,4 +23,4 @@ class LevelSelect extends Menu
     @placeInCenter @container
 
   onLoadStage: (stage) ->
-    stage.load()
+    Game.instance.loadStage stage

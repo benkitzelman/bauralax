@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-01-29
+/*! bauralux - v1.0.0 - 2016-02-12
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -18972,6 +18972,7 @@ Quintus.UI = function(Q) {
       extend(HammerTouch, superClass);
 
       function HammerTouch(opts) {
+        this.onPress = bind(this.onPress, this);
         this.onScroll = bind(this.onScroll, this);
         this.onPinch = bind(this.onPinch, this);
         this.onPan = bind(this.onPan, this);
@@ -18985,6 +18986,7 @@ Quintus.UI = function(Q) {
         this.hammertime.on('pinch', this.onPinch);
         this.hammertime.on('tap', this.onTap);
         this.hammertime.on('pan', this.onPan);
+        this.hammertime.on('press', this.onPress);
         Q.el.addEventListener('scroll', this.onScroll);
       }
 
@@ -18992,6 +18994,7 @@ Quintus.UI = function(Q) {
         this.hammertime.off('pinch', this.onPinch);
         this.hammertime.off('tap', this.onTouch);
         this.hammertime.off('pan', this.offPan);
+        this.hammertime.off('press', this.onPress);
         return Q.el.removeEventListener('scroll', this.onScroll);
       };
 
@@ -19026,7 +19029,7 @@ Quintus.UI = function(Q) {
         };
         evt.p.ox = evt.p.px = canvasX / Q.cssWidth * Q.width;
         evt.p.oy = evt.p.py = canvasY / Q.cssHeight * Q.height;
-        if (stage.viewport) {
+        if (stage != null ? stage.viewport : void 0) {
           evt.p.px /= stage.viewport.scale;
           evt.p.py /= stage.viewport.scale;
           evt.p.px += stage.viewport.x;
@@ -19118,6 +19121,13 @@ Quintus.UI = function(Q) {
 
       HammerTouch.prototype.onScroll = function(e) {
         return console.log('scroll', e);
+      };
+
+      HammerTouch.prototype.onPress = function(e) {
+        var pos, touch;
+        touch = _.first(e.changedPointers || [e]);
+        pos = this.normalize(touch);
+        return this.trigger('press', pos);
       };
 
       return HammerTouch;
@@ -19395,6 +19405,7 @@ Quintus.UI = function(Q) {
       this.input.on('touch-drag-change', this, 'drawSelection');
       this.input.on('touch-drag-end', this, 'removeSelection');
       this.input.on('touch', this, 'moveShips');
+      this.input.on('press', this, 'startBuildSite');
       return this.stage.on('destroyed', this, 'destroy');
     },
     destroy: function() {
@@ -19457,6 +19468,17 @@ Quintus.UI = function(Q) {
       group.moveTo(e.p);
       group.invoke('deselect');
       return group.reset();
+    },
+    startBuildSite: function(e) {
+      var group, site;
+      if ((group = this.selections()).isEmpty()) {
+        return;
+      }
+      this.stage.insert(site = new Q.BuildSite({
+        x: e.p.x,
+        y: e.p.y
+      }));
+      return site;
     }
   });
 
@@ -19627,9 +19649,7 @@ Quintus.UI = function(Q) {
   })(Q.Evented);
 
   Game = (function() {
-    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_explosion.mp3"];
-
-    Game.unitCap = 450;
+    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/red/nebula_0.png", "planets/green/nebula_0.png", "planets/blue/nebula_0.png", "planets/none/nebula_0.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_explosion.mp3"];
 
     Game.start = function() {
       if (this.started == null) {
@@ -19656,11 +19676,11 @@ Quintus.UI = function(Q) {
     }
 
     Game.prototype.stages = function() {
-      return [StageDebug, StageOne, StageTwo, StageThree];
+      return [StageOne, StageTwo, StageThree, StageDebug];
     };
 
     Game.prototype.isLastStage = function() {
-      return this.stages()[this.currentLevelIdx + 1] != null;
+      return !this.stages()[this.currentLevelIdx + 1];
     };
 
     Game.prototype.nextStage = function() {
@@ -19706,7 +19726,7 @@ Quintus.UI = function(Q) {
         return function() {
           _this.Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json");
           _this.configureAnimations();
-          LevelSelect.load();
+          _this.mainMenu();
           return Game.started.resolveWith(_this);
         };
       })(this));
@@ -19721,12 +19741,26 @@ Quintus.UI = function(Q) {
       });
     };
 
+    Game.prototype.viewport = function() {
+      var ref;
+      return (ref = this.currentStage()) != null ? ref.QStage.viewport : void 0;
+    };
+
+    Game.prototype.loadStage = function(stage) {
+      this.currentLevelIdx = _.indexOf(this.stages(), stage);
+      return stage.load();
+    };
+
+    Game.prototype.mainMenu = function() {
+      return LevelSelect.load();
+    };
+
     Game.prototype.startingStage = function() {
-      return _.first(this.stages()).load();
+      return this.loadStage(_.first(this.stages()));
     };
 
     Game.prototype.replayLastStage = function() {
-      return this.stages()[this.currentLevelIdx].load();
+      return this.loadStage(this.stages()[this.currentLevelIdx]);
     };
 
     return Game;
@@ -20328,17 +20362,34 @@ Quintus.UI = function(Q) {
         w: Q.width,
         h: Q.height,
         type: Q.SPRITE_PARTICLE,
-        opacity: 0.3,
-        scale: 4
+        opacity: 0.15,
+        scale: 2
       });
       this.p.x = this.asset().width * this.p.scale / 2 * -1;
       return this.p.y = this.asset().height / 2 * -1;
     },
+    aspectRatio: function() {
+      return this.asset().width / this.asset().height;
+    },
     draw: function(ctx) {
+      var height, width;
+      height = this.asset().height;
+      width = this.p.w * this.aspectRatio();
       ctx.save();
       ctx.globalAlpha = this.p.opacity;
-      ctx.drawImage(this.asset(), 0, 0, this.p.w, this.p.h);
+      ctx.drawImage(this.asset(), 0, 0, this.asset().width, this.asset().height, 0, 0, width, height);
       return ctx.restore();
+    }
+  });
+
+  Q.Sprite.extend('BuildSite', {
+    init: function(p) {
+      this._super(p, {
+        asset: 'planets/nebula/blue.png',
+        type: Q.SPRITE_DEFAULT
+      });
+      this.p.x = this.asset().width * this.p.scale / 2 * -1;
+      return this.p.y = this.asset().height / 2 * -1;
     }
   });
 
@@ -20412,11 +20463,11 @@ Quintus.UI = function(Q) {
     init: function(p) {
       var scale, texture;
       scale = _.max([0.6, Math.ceil(Math.random() * 10) / 10]);
-      texture = 'planets/red/0.png';
+      texture = 'planets/none/0.png';
       this._super(Q._extend({
         sensor: true,
         asset: "planets/planet0.png",
-        texture: 'planets/none/0.png',
+        texture: texture,
         textureWidth: 550,
         frameX: -Q.random(50, Q.asset(texture).width),
         spinSpeed: Q.random(1, 5) / 30,
@@ -20452,8 +20503,21 @@ Quintus.UI = function(Q) {
       return "planets/none/" + asset;
     },
     draw: function(ctx) {
+      this.drawNebula(ctx);
       this.drawImage(ctx);
       return this.drawTeamColors(ctx);
+    },
+    drawNebula: function(ctx) {
+      var dim, nebula, path, xy;
+      path = "planets/" + (this.teamResource.val().name.toLowerCase()) + "/nebula_0.png";
+      nebula = Q.asset(path);
+      dim = _.min([nebula.width, nebula.height]) * this.p.scale * 2;
+      xy = dim / 2;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.08;
+      ctx.drawImage(nebula, -xy, -xy, dim, dim);
+      return ctx.restore();
     },
     drawTeamColors: function(ctx) {
       var gradient, innerRadius, outerRadius;
@@ -21396,8 +21460,7 @@ Quintus.UI = function(Q) {
 
     Menu.prototype.placeInCenter = function(element) {
       element.p.x = Q.center().x;
-      element.p.y = Q.center().y - element.p.h / 2;
-      return console.log(Q.center(), element.p.w / 2, element.p.x);
+      return element.p.y = Q.center().y - element.p.h / 2;
     };
 
     return Menu;
@@ -21452,7 +21515,7 @@ Quintus.UI = function(Q) {
     };
 
     LevelSelect.prototype.onLoadStage = function(stage) {
-      return stage.load();
+      return Game.instance.loadStage(stage);
     };
 
     return LevelSelect;
@@ -21511,7 +21574,7 @@ Quintus.UI = function(Q) {
     StageWonGame.register();
 
     StageWonGame.prototype.addUI = function() {
-      var againBtn, label, nextBtn;
+      var label, nextBtn, returnBtn;
       this.container = this.QStage.insert(new Q.UI.Container({
         x: Q.width / 2,
         y: Q.height / 2,
@@ -21523,30 +21586,31 @@ Quintus.UI = function(Q) {
         color: "#CCCCCC",
         label: "You Won!"
       });
-      nextBtn = new Q.UI.Button({
-        x: 0,
-        y: 50,
-        fill: "#CCCCCC",
-        label: "Next Level"
-      });
-      nextBtn.on("click", this, 'onNextLevel');
       this.container.insert(label);
-      this.container.insert(nextBtn);
-      if (!Game.instance.isLastStage()) {
-        againBtn = new Q.UI.Button({
+      if (Game.instance.isLastStage()) {
+        returnBtn = new Q.UI.Button({
           x: 0,
-          y: 100,
+          y: 50,
           fill: "#CCCCCC",
-          label: "Play Again"
+          label: "Main Menu"
         });
-        againBtn.on("click", this, 'onPlayAgain');
-        this.container.insert(againBtn);
+        returnBtn.on("click", this, 'onReturnToMain');
+        this.container.insert(returnBtn);
+      } else {
+        nextBtn = new Q.UI.Button({
+          x: 0,
+          y: 50,
+          fill: "#CCCCCC",
+          label: "Next Level"
+        });
+        nextBtn.on("click", this, 'onNextLevel');
+        this.container.insert(nextBtn);
       }
-      return this.container.fit(100);
+      return this.container.fit();
     };
 
-    StageWonGame.prototype.onPlayAgain = function() {
-      return Game.instance.startingStage();
+    StageWonGame.prototype.onReturnToMain = function() {
+      return Game.instance.mainMenu();
     };
 
     StageWonGame.prototype.onNextLevel = function() {
