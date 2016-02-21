@@ -7,7 +7,7 @@ Q.Sprite.extend 'Background',
       w       : Q.width
       h       : Q.height
       type    : Q.SPRITE_PARTICLE
-      opacity : 0.15
+      opacity : 0.10
       scale   : 2
 
     @p.x = @asset().width * @p.scale / 2 * -1

@@ -45,6 +45,7 @@ Q.Sprite.extend "Planet",
     @drawTeamColors ctx
 
   drawNebula: (ctx) ->
+    return if @teamResource.val() is Team.NONE
     path   = "planets/#{ @teamResource.val().name.toLowerCase() }/nebula_0.png"
     nebula = Q.asset path
     dim    = _.min([ nebula.width, nebula.height ]) * @p.scale * 2
@@ -53,7 +54,7 @@ Q.Sprite.extend "Planet",
     ctx.save()
 
     ctx.globalCompositeOperation = 'lighter'
-    ctx.globalAlpha = 0.08
+    ctx.globalAlpha = 0.2
 
     ctx.drawImage nebula, -xy, -xy, dim, dim
 

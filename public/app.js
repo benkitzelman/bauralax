@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-02-12
+/*! bauralux - v1.0.0 - 2016-02-22
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -20362,7 +20362,7 @@ Quintus.UI = function(Q) {
         w: Q.width,
         h: Q.height,
         type: Q.SPRITE_PARTICLE,
-        opacity: 0.15,
+        opacity: 0.10,
         scale: 2
       });
       this.p.x = this.asset().width * this.p.scale / 2 * -1;
@@ -20509,13 +20509,16 @@ Quintus.UI = function(Q) {
     },
     drawNebula: function(ctx) {
       var dim, nebula, path, xy;
+      if (this.teamResource.val() === Team.NONE) {
+        return;
+      }
       path = "planets/" + (this.teamResource.val().name.toLowerCase()) + "/nebula_0.png";
       nebula = Q.asset(path);
       dim = _.min([nebula.width, nebula.height]) * this.p.scale * 2;
       xy = dim / 2;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.08;
+      ctx.globalAlpha = 0.2;
       ctx.drawImage(nebula, -xy, -xy, dim, dim);
       return ctx.restore();
     },
