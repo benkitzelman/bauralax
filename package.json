@@ -5,7 +5,9 @@
   "main": "index.coffee",
   "scripts": {
     "server": "grunt http-server",
-    "start": "grunt start"
+    "start": "grunt start",
+    "docker-build": "docker build -t bauralax/server .",
+    "docker-run": "docker run -p 3000:3000 -ti bauralax/server"
   },
   "author": "@benkitzelman",
   "license": "ISC",
@@ -21,6 +23,6 @@
     "http-server": "~ 0.5.5",
     "lodash": "^3.10.1",
     "quintus": "^0.2.0",
-    "spriter": "0.2.4"
+    "spriter": "https://github.com/tristanstraub/spriter.git"
   }
 }
