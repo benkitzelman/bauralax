@@ -22,7 +22,10 @@ class Game
     "planets/red/nebula_0.png"
     "planets/green/nebula_0.png"
     "planets/blue/nebula_0.png"
-    "planets/none/nebula_0.png"
+
+    "planets/red/nebula_1.png"
+    "planets/green/nebula_1.png"
+    "planets/blue/nebula_1.png"
 
     "planets/planet0.png"
     "planets/planet1.png"

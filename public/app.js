@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-02-22
+/*! bauralux - v1.0.0 - 2016-02-26
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -19649,7 +19649,7 @@ Quintus.UI = function(Q) {
   })(Q.Evented);
 
   Game = (function() {
-    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/red/nebula_0.png", "planets/green/nebula_0.png", "planets/blue/nebula_0.png", "planets/none/nebula_0.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_explosion.mp3"];
+    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/red/nebula_0.png", "planets/green/nebula_0.png", "planets/blue/nebula_0.png", "planets/red/nebula_1.png", "planets/green/nebula_1.png", "planets/blue/nebula_1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_explosion.mp3"];
 
     Game.start = function() {
       if (this.started == null) {
@@ -20484,7 +20484,7 @@ Quintus.UI = function(Q) {
       this.add('absorber');
       this.on('absorption:target-met', this, 'onAbsorptionTargetMet');
       this.on('absorption:absorbed', this, 'onAbsorbed');
-      return this.p.texture = this.randomTeamTexture();
+      return this.updateForTeam();
     },
     width: function() {
       var ref, ref1;
@@ -20494,13 +20494,18 @@ Quintus.UI = function(Q) {
       var ref, ref1;
       return ((ref = this.asset()) != null ? ref.height : void 0) || ((ref1 = this.sheet()) != null ? ref1.tileH : void 0);
     },
-    randomTeamTexture: function() {
-      var asset, ref, team;
-      asset = (Q.random(0, 1)) + ".png";
+    randomTeamTexture: function(filePrefix) {
+      var asset, fileName, ref, team;
+      fileName = _.filter([filePrefix, "" + (Q.random(0, 1))]).join('_');
+      asset = fileName + ".png";
       if (team = (ref = this.p.team) != null ? ref.name : void 0) {
         return "planets/" + (team.toLowerCase()) + "/" + asset;
       }
       return "planets/none/" + asset;
+    },
+    updateForTeam: function() {
+      this.p.texture = this.randomTeamTexture();
+      return this.p.nebulaTexture = this.randomTeamTexture('nebula');
     },
     draw: function(ctx) {
       this.drawNebula(ctx);
@@ -20508,17 +20513,16 @@ Quintus.UI = function(Q) {
       return this.drawTeamColors(ctx);
     },
     drawNebula: function(ctx) {
-      var dim, nebula, path, xy;
+      var dim, nebula, xy;
       if (this.teamResource.val() === Team.NONE) {
         return;
       }
-      path = "planets/" + (this.teamResource.val().name.toLowerCase()) + "/nebula_0.png";
-      nebula = Q.asset(path);
+      nebula = Q.asset(this.p.nebulaTexture);
       dim = _.min([nebula.width, nebula.height]) * this.p.scale * 2;
       xy = dim / 2;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.2;
+      ctx.globalAlpha = 0.4;
       ctx.drawImage(nebula, -xy, -xy, dim, dim);
       return ctx.restore();
     },
@@ -20619,7 +20623,7 @@ Quintus.UI = function(Q) {
       var reliquishingTeam;
       reliquishingTeam = this.teamResource.val();
       this.teamResource.val(absorbingTeam);
-      this.p.texture = this.randomTeamTexture();
+      this.updateForTeam();
       reliquishingTeam.trigger('planet-lost', {
         planet: this,
         conquoringTeam: absorbingTeam

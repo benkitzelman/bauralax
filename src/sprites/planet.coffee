@@ -26,7 +26,7 @@ Q.Sprite.extend "Planet",
     @on 'absorption:target-met', @, 'onAbsorptionTargetMet'
     @on 'absorption:absorbed', @, 'onAbsorbed'
 
-    @p.texture = @randomTeamTexture()
+    @updateForTeam()
 
   width: ->
     @asset()?.width or @sheet()?.tileW
@@ -34,10 +34,15 @@ Q.Sprite.extend "Planet",
   height: ->
     @asset()?.height or @sheet()?.tileH
 
-  randomTeamTexture: ->
-    asset = "#{ Q.random(0, 1) }.png"
+  randomTeamTexture: (filePrefix) ->
+    fileName =_.filter([ filePrefix, "#{ Q.random(0, 1) }"]).join('_')
+    asset    = "#{ fileName }.png"
     return "planets/#{ team.toLowerCase()}/#{ asset }" if team = @p.team?.name
     "planets/none/#{ asset }"
+
+  updateForTeam: ->
+    @p.texture = @randomTeamTexture()
+    @p.nebulaTexture = @randomTeamTexture('nebula')
 
   draw: (ctx) ->
     @drawNebula ctx
@@ -46,15 +51,15 @@ Q.Sprite.extend "Planet",
 
   drawNebula: (ctx) ->
     return if @teamResource.val() is Team.NONE
-    path   = "planets/#{ @teamResource.val().name.toLowerCase() }/nebula_0.png"
-    nebula = Q.asset path
+
+    nebula = Q.asset @p.nebulaTexture
     dim    = _.min([ nebula.width, nebula.height ]) * @p.scale * 2
     xy     = dim / 2
 
     ctx.save()
 
     ctx.globalCompositeOperation = 'lighter'
-    ctx.globalAlpha = 0.2
+    ctx.globalAlpha = 0.4
 
     ctx.drawImage nebula, -xy, -xy, dim, dim
 
@@ -156,7 +161,7 @@ Q.Sprite.extend "Planet",
   onAbsorptionTargetMet: (absorbingTeam) ->
     reliquishingTeam = @teamResource.val()
     @teamResource.val absorbingTeam
-    @p.texture = @randomTeamTexture()
+    @updateForTeam()
 
     reliquishingTeam.trigger 'planet-lost', { planet: @, conquoringTeam: absorbingTeam }
     absorbingTeam.trigger 'planet-won', { planet: @, reliquishingTeam }
