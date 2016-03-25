@@ -23,6 +23,7 @@ Quintus.HammerTouch = (Q) ->
 
       @hammertime = new Hammer Q.el, Hammer.defaults
       @hammertime.get('pinch').set(enable: true)
+      @hammertime.get('press').set(threshold: 15, time: 1000)
 
       @hammertime.on 'pinch', @onPinch
       @hammertime.on 'tap', @onTap

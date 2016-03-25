@@ -2,6 +2,7 @@ Q.component 'shipBuilder',
 
   added: ->
     @timeSinceLastShipMS = 0
+    @entity.step ?= ->
     @entity.on 'inserted', @, 'onInserted'
     @entity.on 'destroyed', @, 'stopBuilding'
     @entity.on 'step', @, 'onStep'
@@ -14,15 +15,20 @@ Q.component 'shipBuilder',
     @entity.p.buildRate or 1000
 
   onStep: (dt) ->
+    return unless @entity.p.isBuilding
     @timeSinceLastShipMS += dt * 1000
     @build() if @timeSinceLastShipMS >= @buildRate()
 
   stopBuilding: ->
-    clearInterval @timer
+    @entity.p.isBuilding = false
+
+  startBuilding: ->
+    @entity.p.isBuilding = true
 
   nextCoords: ->
+    scale = @entity.p.scale or 1
     defaultDistance = =>
-      ( @entity.width() * @entity.p.scale / 2 ) + ( 10  * @entity.p.scale )
+      ( @entity.width() * scale / 2 ) + ( 10  * scale )
 
     { x, y } = @entity.p
 

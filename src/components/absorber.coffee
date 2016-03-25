@@ -23,7 +23,7 @@ Q.component 'absorber',
   absorb: (sprite) ->
     return unless @canBeAbsorbed( sprite )
     return if @absorbedPerc() >= 1
-
+    
     @absorbed.push(sprite: sprite, team: sprite.teamResource.val(), val: @valueFor( sprite ) )
     sprite.absorbable.absorb @entity
     @updateProgressBar()
@@ -33,7 +33,7 @@ Q.component 'absorber',
     return unless @absorbedPerc() >= 1
 
     @entity.trigger 'absorption:target-met', @absorber()
-    @reset()
+    @reset() if @entity.p.canChangeTeams
 
   reset: ->
     @absorbed = []
@@ -42,9 +42,10 @@ Q.component 'absorber',
 
   updateProgressBar: ->
     if not @_progressBar
+      scale = @entity.p.scale or 1
       @_progressBar = new Q.ProgressBar(
-        x: @entity.p.x - (@entity.width() * @entity.p.scale / 2 + 5 + 30),
-        y: @entity.p.y - (@entity.height() * @entity.p.scale / 2)
+        x: @entity.p.x - (@entity.width() * scale / 2 + 5 + 30),
+        y: @entity.p.y - (@entity.height() * scale / 2)
       )
       @entity.stage.insert @_progressBar
 
@@ -79,10 +80,17 @@ Q.component 'absorber',
       not @entity.teamResource?.isTeammate( collision.obj )
 
     isAttackingEnemy = =>
-      isEnemy() and hasTargetedEntity()
+      @entity.p.canChangeTeams and isEnemy() and hasTargetedEntity()
+
+    isPoweringUpOwnAsset = =>
+      @entity.p.canChangeTeams is false and not isEnemy() and hasTargetedEntity()
+
+    isReclaimingLostPower = =>
+      isReclaimingShip() and hasAbsorbedOtherTeams()
     #--
 
     return if collision.obj.isDestroyed
     return @absorb( collision.obj ) if isAttackingEnemy()
-    return @absorb( collision.obj ) if isReclaimingShip() and hasAbsorbedOtherTeams()
+    return @absorb( collision.obj ) if isReclaimingLostPower()
+    return @absorb( collision.obj ) if isPoweringUpOwnAsset()
 
