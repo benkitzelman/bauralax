@@ -27,6 +27,7 @@ class Stage extends Scene
   setupStage: ->
     @QStage.add "viewport"
     @QStage.add "selectionControls"
+    @QStage.on "step", @, 'onStep'
     Q.hammerTouchInput.on 'zoom-out', @onZoomOut
     Q.hammerTouchInput.on 'zoom-in', @onZoomIn
 
@@ -88,15 +89,50 @@ class Stage extends Scene
 
     @QStage.viewport.centerOn coords.x, coords.y
 
+  onStep: (dt) ->
+    console.log 'onStep'
+    return unless @viewportTarget
+    
+    { coords, scale } = @viewportTarget
+    return delete @viewportTarget if @QStage.viewport.scale is scale
+
+    vX = @QStage.viewport.x
+    vY = @QStage.viewport.y
+
+    maxStepDistance = 20
+    targetAngle     = Q.angle vX, vY, x, y
+    tripDistance    = Q.distance vX, vY, x, y
+    stepDistance    = _.min [ tripDistance, maxStepDistance ] # step hypotenuse
+
+    xDistance       = Q.offsetX targetAngle, stepDistance
+    yDistance       = Q.offsetY targetAngle, stepDistance
+
+    coords =
+      x: ( xDistance * Q.axis( targetAngle ).x ) + x
+      y: ( yDistance * Q.axis( targetAngle ).y ) + y
+
+    @QStage.viewport.scale = if @QStage.viewport.scale > scale
+      scale * dt * -1
+    else
+      scale * dt *
+
+    @QStage.viewport.centerOn coords.x, coords.y
+
   zoomIncrementFor: (velocity) ->
     _.max [ 0.05, Math.abs( velocity ) ]
 
   onZoomOut: (e) =>
-    console.log 'zoom-out'
-    @QStage.viewport.scale = _.max [ 0.4, @QStage.viewport.scale - @zoomIncrementFor( e.velocity ) ]
-    @stepViewportTo( center ) if center = e.initialCenter
+    @viewportTarget = 
+      scale: _.max [ 0.4, @QStage.viewport.scale - @zoomIncrementFor( e.velocity ) ]
+      coords: e.initialCenter
+
+    # @QStage.viewport.scale = _.max [ 0.4, @QStage.viewport.scale - @zoomIncrementFor( e.velocity ) ]
+    # @stepViewportTo( center ) if center = e.initialCenter
 
   onZoomIn: (e) =>
-    console.log 'zoom-in'
-    @QStage.viewport.scale = _.min [ 1.4, @QStage.viewport.scale + @zoomIncrementFor( e.velocity ) ]
-    @stepViewportTo( center ) if center = e.initialCenter
+    @viewportTarget = 
+      scale: _.min [ 1.4, @QStage.viewport.scale + @zoomIncrementFor( e.velocity ) ]
+      coords: e.initialCenter
+
+    # @QStage.viewport.scale = _.min [ 1.4, @QStage.viewport.scale + @zoomIncrementFor( e.velocity ) ]
+    # @stepViewportTo( center ) if center = e.initialCenter
