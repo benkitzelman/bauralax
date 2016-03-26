@@ -24,8 +24,10 @@ class TeamStrategy
   ownResources      : (type) -> @teamResources( @team, type )
   ownShips          : -> @ownResources( "Ship" )
   ownPlanets        : -> @ownResources( "Planet" )
+  ownShipYards      : -> @ownResources( "ShipYard" )
   enemyShips        : -> @enemyResources( "Ship" )
   enemyPlanets      : -> @enemyResources( "Planet" )
+  enemyShipYards    : -> @enemyResources( "ShipYard" )
   unoccupiedPlanets : -> @teamResources( Team.NONE, "Planet" )
   idleShips         : -> _.select @ownShips(), (s) -> s.isIdle()
   shipsFrom         : (planet) -> _.select @ownShips(), builder: planet
@@ -34,6 +36,10 @@ class TeamStrategy
   closest: ->
     sprites = []
     fn =
+      enemyShipYard: =>
+        sprites = _.flatten _.values @enemyShipYards()
+        fn
+
       enemyPlanet: =>
         sprites = _.flatten _.values @enemyPlanets()
         fn

@@ -34,8 +34,21 @@ Q.Sprite.extend 'ShipYard',
     rSum   = @p.radius + 1
     (dx * dx) + (dy * dy) <= (rSum * rSum)
 
+  explode: (color)->
+    @stage.insert new Q.Explosion
+      x     : @p.x
+      y     : @p.y
+      vx    : @p.vx
+      vy    : @p.vy
+      radius: @width() + 30
+      color : color or @teamResource.val().color(0.75)
+
+    Q.audio.play 'ship_explosion.mp3'
+    @destroy()
+
   onAbsorptionTargetMet: ->
     @shipBuilder.startBuilding()
+
     @stage.insert new Q.ShieldFlare
       x           : @p.x
       y           : @p.y
@@ -44,7 +57,7 @@ Q.Sprite.extend 'ShipYard',
       opacityRate : 0
 
   onAbsorbed: (entity) ->
-    
+    @explode() if @absorber.absorber() isnt @p.team
 ,
   createWith: (p) ->
     on: (stage) ->

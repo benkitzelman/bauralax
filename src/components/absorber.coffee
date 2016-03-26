@@ -39,6 +39,8 @@ Q.component 'absorber',
     @absorbed = []
     @entity.off "hit.sprite", @, 'onCollision'
     @entity.on "hit.sprite", @, 'onCollision'
+    @entity.off 'destroyed', @, 'onDestroyed'
+    @entity.on 'destroyed', @, 'onDestroyed'
 
   updateProgressBar: ->
     if not @_progressBar
@@ -66,6 +68,9 @@ Q.component 'absorber',
   hasBeenAbsorbed: (sprite) ->
     !!_.find @absorbed, (a) -> a.sprite is sprite
 
+  onDestroyed: ->
+    @_progressBar?.destroy()
+
   onCollision: (collision) ->
     isReclaimingShip = =>
       collision.obj.isA("Ship") and @entity.teamResource.isTeammate( collision.obj ) and hasTargetedEntity()
@@ -80,7 +85,7 @@ Q.component 'absorber',
       not @entity.teamResource?.isTeammate( collision.obj )
 
     isAttackingEnemy = =>
-      @entity.p.canChangeTeams and isEnemy() and hasTargetedEntity()
+      isEnemy() and hasTargetedEntity()
 
     isPoweringUpOwnAsset = =>
       @entity.p.canChangeTeams is false and not isEnemy() and hasTargetedEntity()

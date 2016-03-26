@@ -19346,7 +19346,9 @@ Quintus.UI = function(Q) {
     reset: function() {
       this.absorbed = [];
       this.entity.off("hit.sprite", this, 'onCollision');
-      return this.entity.on("hit.sprite", this, 'onCollision');
+      this.entity.on("hit.sprite", this, 'onCollision');
+      this.entity.off('destroyed', this, 'onDestroyed');
+      return this.entity.on('destroyed', this, 'onDestroyed');
     },
     updateProgressBar: function() {
       var ref, scale;
@@ -19377,6 +19379,10 @@ Quintus.UI = function(Q) {
         return a.sprite === sprite;
       });
     },
+    onDestroyed: function() {
+      var ref;
+      return (ref = this._progressBar) != null ? ref.destroy() : void 0;
+    },
     onCollision: function(collision) {
       var hasAbsorbedOtherTeams, hasTargetedEntity, isAttackingEnemy, isEnemy, isPoweringUpOwnAsset, isReclaimingLostPower, isReclaimingShip;
       isReclaimingShip = (function(_this) {
@@ -19402,7 +19408,7 @@ Quintus.UI = function(Q) {
       })(this);
       isAttackingEnemy = (function(_this) {
         return function() {
-          return _this.entity.p.canChangeTeams && isEnemy() && hasTargetedEntity();
+          return isEnemy() && hasTargetedEntity();
         };
       })(this);
       isPoweringUpOwnAsset = (function(_this) {
@@ -20056,12 +20062,20 @@ Quintus.UI = function(Q) {
       return this.ownResources("Planet");
     };
 
+    TeamStrategy.prototype.ownShipYards = function() {
+      return this.ownResources("ShipYard");
+    };
+
     TeamStrategy.prototype.enemyShips = function() {
       return this.enemyResources("Ship");
     };
 
     TeamStrategy.prototype.enemyPlanets = function() {
       return this.enemyResources("Planet");
+    };
+
+    TeamStrategy.prototype.enemyShipYards = function() {
+      return this.enemyResources("ShipYard");
     };
 
     TeamStrategy.prototype.unoccupiedPlanets = function() {
@@ -20090,6 +20104,12 @@ Quintus.UI = function(Q) {
       var fn, sprites;
       sprites = [];
       return fn = {
+        enemyShipYard: (function(_this) {
+          return function() {
+            sprites = _.flatten(_.values(_this.enemyShipYards()));
+            return fn;
+          };
+        })(this),
         enemyPlanet: (function(_this) {
           return function() {
             sprites = _.flatten(_.values(_this.enemyPlanets()));
@@ -20155,7 +20175,7 @@ Quintus.UI = function(Q) {
     AggressiveTeam.prototype.bestTargetFor = function(sprite) {
       var target;
       target = Target.parse(sprite);
-      return this.closest().unoccupiedPlanet().to(target) || this.closest().enemyPlanet().to(target);
+      return this.closest().unoccupiedPlanet().to(target) || this.closest().enemyShipYard().to(target) || this.closest().enemyPlanet().to(target);
     };
 
     AggressiveTeam.prototype.onPlanetLost = function(arg) {
@@ -20910,13 +20930,14 @@ Quintus.UI = function(Q) {
     onReachedTarget: function(target) {
       this.p.lastX = this.p.x;
       this.p.lastY = this.p.y;
-      if (!this.p.path.moveNext()) {
-        this.stop();
-      }
       this.trigger('reached-target', {
         item: this,
         target: target
       });
+      if (this.p.path.moveNext()) {
+        return;
+      }
+      this.stop();
       return this.moveAround();
     },
     moveTo: function(coords) {
@@ -21085,6 +21106,18 @@ Quintus.UI = function(Q) {
       rSum = this.p.radius + 1;
       return (dx * dx) + (dy * dy) <= (rSum * rSum);
     },
+    explode: function(color) {
+      this.stage.insert(new Q.Explosion({
+        x: this.p.x,
+        y: this.p.y,
+        vx: this.p.vx,
+        vy: this.p.vy,
+        radius: this.width() + 30,
+        color: color || this.teamResource.val().color(0.75)
+      }));
+      Q.audio.play('ship_explosion.mp3');
+      return this.destroy();
+    },
     onAbsorptionTargetMet: function() {
       this.shipBuilder.startBuilding();
       return this.stage.insert(new Q.ShieldFlare({
@@ -21095,7 +21128,11 @@ Quintus.UI = function(Q) {
         opacityRate: 0
       }));
     },
-    onAbsorbed: function(entity) {}
+    onAbsorbed: function(entity) {
+      if (this.absorber.absorber() !== this.p.team) {
+        return this.explode();
+      }
+    }
   }, {
     createWith: function(p) {
       return {

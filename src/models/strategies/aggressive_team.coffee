@@ -14,7 +14,7 @@ class AggressiveTeam extends TeamStrategy
 
   bestTargetFor: (sprite) ->
     target = Target.parse sprite
-    @closest().unoccupiedPlanet().to( target ) or @closest().enemyPlanet().to( target )
+    @closest().unoccupiedPlanet().to( target ) or @closest().enemyShipYard().to( target ) or @closest().enemyPlanet().to( target )
 
   onPlanetLost: ({ planet }) ->
     return unless @ownPlanets().length is 0

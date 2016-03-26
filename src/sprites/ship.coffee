@@ -111,8 +111,10 @@ Q.Sprite.extend "Ship",
   onReachedTarget: (target) ->
     @p.lastX = @p.x
     @p.lastY = @p.y
-    @stop() unless @p.path.moveNext()
+
     @trigger 'reached-target', item: @, target: target
+    return if @p.path.moveNext()
+    @stop()
     @moveAround()
 
   moveTo: (coords) ->
