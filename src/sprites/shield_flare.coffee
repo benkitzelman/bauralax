@@ -11,7 +11,7 @@ Q.Sprite.extend 'ShieldFlare',
         ttl         : 200
       , p
 
-    @add 'ttl'
+    @add 'ttl' if @p.opacityRate
 
   step: (dt) ->
     if @p.opacity >= 0
@@ -20,7 +20,7 @@ Q.Sprite.extend 'ShieldFlare',
       @destroy()
 
   draw: (ctx) ->
-    flareWidth = 20
+    flareWidth = _.min [ 20, @p.radius * .5 ]
     outer      = @p.radius
     inner      = outer - flareWidth
 

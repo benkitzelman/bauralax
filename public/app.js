@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-03-25
+/*! bauralux - v1.0.0 - 2016-03-26
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -20770,7 +20770,9 @@ Quintus.UI = function(Q) {
         z: 5,
         ttl: 200
       }, p));
-      return this.add('ttl');
+      if (this.p.opacityRate) {
+        return this.add('ttl');
+      }
     },
     step: function(dt) {
       if (this.p.opacity >= 0) {
@@ -20781,7 +20783,7 @@ Quintus.UI = function(Q) {
     },
     draw: function(ctx) {
       var flareWidth, grd, inner, outer;
-      flareWidth = 20;
+      flareWidth = _.min([20, this.p.radius * .5]);
       outer = this.p.radius;
       inner = outer - flareWidth;
       ctx.save();
@@ -21054,9 +21056,10 @@ Quintus.UI = function(Q) {
         isBuilding: false,
         buildRate: 6000,
         canChangeTeams: false,
-        absorptionTarget: 250,
+        absorptionTarget: 100,
         angle: Q.random(0, 360)
       });
+      this.p.radius = this.width() * (this.p.scale || 1) / 2;
       this.add('teamResource');
       this.add('absorber');
       this.add('shipBuilder');
@@ -21072,28 +21075,27 @@ Quintus.UI = function(Q) {
       return ((ref = this.asset()) != null ? ref.height : void 0) || ((ref1 = this.sheet()) != null ? ref1.tileH : void 0);
     },
     isInBounds: function(entityOrCoords) {
-      var dx, dy, rSum, radius, ref, ref1, x, y;
+      var dx, dy, rSum, ref, ref1, x, y;
       ref1 = (ref = Target.parse(entityOrCoords)) != null ? ref.coords() : void 0, x = ref1.x, y = ref1.y;
       if (!((x != null) && (y != null))) {
         return false;
       }
-      radius = this.width() * (this.p.scale || 1) / 2;
       dx = this.p.x - x;
       dy = this.p.y - y;
-      rSum = radius + 1;
+      rSum = this.p.radius + 1;
       return (dx * dx) + (dy * dy) <= (rSum * rSum);
     },
     onAbsorptionTargetMet: function() {
-      return this.shipBuilder.startBuilding();
-    },
-    onAbsorbed: function(entity) {
+      this.shipBuilder.startBuilding();
       return this.stage.insert(new Q.ShieldFlare({
         x: this.p.x,
         y: this.p.y,
-        color: entity.teamResource.val().color(0.8),
-        radius: (this.width() / 2 + 20) * (this.p.scale || 1)
+        color: this.p.team.color(0.8),
+        radius: this.p.radius + 5,
+        opacityRate: 0
       }));
-    }
+    },
+    onAbsorbed: function(entity) {}
   }, {
     createWith: function(p) {
       return {

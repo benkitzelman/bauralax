@@ -7,8 +7,10 @@ Q.Sprite.extend 'ShipYard',
       isBuilding       : false
       buildRate        : 6000
       canChangeTeams   : false
-      absorptionTarget : 250
+      absorptionTarget : 100
       angle            : Q.random(0, 360)
+
+    @p.radius = @width() * (@p.scale or 1) / 2
 
     @add 'teamResource'
     @add 'absorber'
@@ -27,21 +29,22 @@ Q.Sprite.extend 'ShipYard',
     {x, y} = Target.parse( entityOrCoords )?.coords()
     return false unless x? and y?
 
-    radius = @width() * (@p.scale or 1) / 2
     dx     = @p.x - x
     dy     = @p.y - y
-    rSum   = radius + 1
+    rSum   = @p.radius + 1
     (dx * dx) + (dy * dy) <= (rSum * rSum)
 
   onAbsorptionTargetMet: ->
     @shipBuilder.startBuilding()
+    @stage.insert new Q.ShieldFlare
+      x           : @p.x
+      y           : @p.y
+      color       : @p.team.color(0.8)
+      radius      : @p.radius + 5
+      opacityRate : 0
 
   onAbsorbed: (entity) ->
-    @stage.insert new Q.ShieldFlare
-      x      : @p.x
-      y      : @p.y
-      color  : entity.teamResource.val().color(0.8)
-      radius : ( @width() / 2 + 20 ) * (@p.scale or 1)
+    
 ,
   createWith: (p) ->
     on: (stage) ->
