@@ -6,6 +6,7 @@ class Stage extends Scene
     @applyStrategy()
     @addBackground()
     @addPlanets()
+    window.setVP = (@viewportTarget) =>
 
   autoScale: ->
     padding = 75
@@ -27,6 +28,8 @@ class Stage extends Scene
   setupStage: ->
     @QStage.add "viewport"
     @QStage.add "selectionControls"
+    @QStage.on "step", @, 'onStep'
+    Q.hammerTouchInput.on "press", @onPress
     Q.hammerTouchInput.on 'zoom-out', @onZoomOut
     Q.hammerTouchInput.on 'zoom-in', @onZoomIn
 
@@ -35,6 +38,8 @@ class Stage extends Scene
     @QStage.viewport.scale = @viewport?.scale or @autoScale()
 
     # @QStage.collide = (obj, options) ->
+    #   debugger
+      #apply the collision mask so friendly ships dont collide
 
   addBackground: =>
     @QStage.insert(new Q.Background)
@@ -88,15 +93,65 @@ class Stage extends Scene
 
     @QStage.viewport.centerOn coords.x, coords.y
 
+  onStep: (dt) ->
+    stepCoords = =>
+      { x, y } = @viewportTarget?.coords or {}
+      return unless x? and y?
+
+      vX = @QStage.viewport.x
+      vY = @QStage.viewport.y
+
+      maxStepDistance = 40 * dt
+      targetAngle     = Q.angle vX, vY, x, y
+      tripDistance    = Q.distance vX, vY, x, y
+      stepDistance    = _.min [ tripDistance, maxStepDistance ] # step hypotenuse
+
+      xDistance       = Q.offsetX targetAngle, stepDistance
+      yDistance       = Q.offsetY targetAngle, stepDistance
+
+      coords =
+        x: ( xDistance * Q.axis( targetAngle ).x ) + x
+        y: ( yDistance * Q.axis( targetAngle ).y ) + y
+
+      console.log 'center', coords
+      # @QStage.viewport.x = coords.x
+      # @QStage.viewport.y = coords.y
+      @QStage.viewport.centerOn coords.x, coords.y
+
+    stepScale = =>
+      return unless scale = @viewportTarget?.scale
+      return if scale is @QStage.viewport.scale
+
+      remainingScale = Math.abs( @QStage.viewport.scale - scale )
+      scaleStep      = _.min [ (dt * 40), remainingScale ]
+
+      scaleStep *= -1 if @QStage.viewport.scale > scale
+      @QStage.viewport.scale += scaleStep
+    #--
+
+    stepScale()
+    stepCoords()
+    delete @viewportTarget if @viewportTarget?.scale is @QStage.viewport.scale
+
   zoomIncrementFor: (velocity) ->
-    _.max [ 0.05, Math.abs( velocity ) ]
+    _.max [ 0.15, Math.abs( velocity ) ]
 
   onZoomOut: (e) =>
-    console.log 'zoom-out'
-    @QStage.viewport.scale = _.max [ 0.4, @QStage.viewport.scale - @zoomIncrementFor( e.velocity ) ]
-    @stepViewportTo( center ) if center = e.initialCenter
+    @viewportTarget ?= 
+      scale: _.max [ 0.2, @QStage.viewport.scale - @zoomIncrementFor( e.velocity ) ]
+      coords: e.initialCenter
 
   onZoomIn: (e) =>
-    console.log 'zoom-in'
-    @QStage.viewport.scale = _.min [ 1.4, @QStage.viewport.scale + @zoomIncrementFor( e.velocity ) ]
-    @stepViewportTo( center ) if center = e.initialCenter
+    @viewportTarget ?= 
+      scale: _.min [ 3, @QStage.viewport.scale + @zoomIncrementFor( e.velocity ) ]
+      coords: e.initialCenter
+
+  onPress: (e) =>
+    props = 
+      x      : e.p.x
+      y      : e.p.y
+      team   : Game.instance.playerTeam
+
+    Q.ShipYard.createWith( props ).on( @QStage )
+
+

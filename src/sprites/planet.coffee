@@ -15,7 +15,9 @@ Q.Sprite.extend "Planet",
       team             : Team.NONE
       type             : Q.SPRITE_DEFAULT
       buildRate        : 2000
+      isBuilding       : true
       absorptionTarget : 50
+      canChangeTeams   : true
       angle            : Q.random(-45, 45)
     , p
 
@@ -59,7 +61,7 @@ Q.Sprite.extend "Planet",
     ctx.save()
 
     ctx.globalCompositeOperation = 'lighter'
-    ctx.globalAlpha = 0.4
+    ctx.globalAlpha = 0.3
 
     ctx.drawImage nebula, -xy, -xy, dim, dim
 
@@ -152,7 +154,7 @@ Q.Sprite.extend "Planet",
     {x, y} = Target.parse( entityOrCoords )?.coords()
     return false unless x? and y?
 
-    radius = @width() * @p.scale / 2
+    radius = @width() * (@p.scale or 1) / 2
     dx     = @p.x - x
     dy     = @p.y - y
     rSum   = radius + 1

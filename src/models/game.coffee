@@ -32,6 +32,10 @@ class Game
     "planets/planet_sheet_0.png"
     "planets/planet_sheet_0.json"
 
+    "ship_yard/blue.png"
+    "ship_yard/red.png"
+    "ship_yard/green.png"
+
     "ship_explosion.mp3"
   ]
 

@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-02-26
+/*! bauralux - v1.0.0 - 2016-03-25
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -18983,6 +18983,10 @@ Quintus.UI = function(Q) {
         this.hammertime.get('pinch').set({
           enable: true
         });
+        this.hammertime.get('press').set({
+          threshold: 15,
+          time: 1000
+        });
         this.hammertime.on('pinch', this.onPinch);
         this.hammertime.on('tap', this.onTap);
         this.hammertime.on('pan', this.onPan);
@@ -19189,6 +19193,18 @@ Quintus.UI = function(Q) {
     };
   };
 
+  Quintus.TeamCollisions = function(Q) {
+    var defaultStrategy;
+    defaultStrategy = Q.collision;
+    return Q.collision = function(o1, o2) {
+      var ref, ref1;
+      if ((o1 != null ? (ref = o1.p) != null ? ref.teamCollisionMask : void 0 : void 0) && o1.p.teamCollisionMask === (o2 != null ? (ref1 = o2.p) != null ? ref1.teamCollisionMask : void 0 : void 0)) {
+        return;
+      }
+      return defaultStrategy(o1, o2);
+    };
+  };
+
   Quintus.Util = function(Q) {
     Q.center = function() {
       return {
@@ -19253,7 +19269,7 @@ Quintus.UI = function(Q) {
     imagePath: "./assets/images/",
     audioPath: './assets/audio/',
     dataPath: './assets/images/'
-  }).include("Sprites, Anim, Math, Util, Scenes, Input, HammerTouch, 2D, UI, Audio").setup({
+  }).include("Sprites, Anim, Math, Util, Scenes, Input, HammerTouch, 2D, UI, Audio, TeamCollisions").setup({
     maximize: true,
     scaleToFit: true
   }).touch().enableSound();
@@ -19323,7 +19339,9 @@ Quintus.UI = function(Q) {
         return;
       }
       this.entity.trigger('absorption:target-met', this.absorber());
-      return this.reset();
+      if (this.entity.p.canChangeTeams) {
+        return this.reset();
+      }
     },
     reset: function() {
       this.absorbed = [];
@@ -19331,11 +19349,12 @@ Quintus.UI = function(Q) {
       return this.entity.on("hit.sprite", this, 'onCollision');
     },
     updateProgressBar: function() {
-      var ref;
+      var ref, scale;
       if (!this._progressBar) {
+        scale = this.entity.p.scale || 1;
         this._progressBar = new Q.ProgressBar({
-          x: this.entity.p.x - (this.entity.width() * this.entity.p.scale / 2 + 5 + 30),
-          y: this.entity.p.y - (this.entity.height() * this.entity.p.scale / 2)
+          x: this.entity.p.x - (this.entity.width() * scale / 2 + 5 + 30),
+          y: this.entity.p.y - (this.entity.height() * scale / 2)
         });
         this.entity.stage.insert(this._progressBar);
       }
@@ -19359,7 +19378,7 @@ Quintus.UI = function(Q) {
       });
     },
     onCollision: function(collision) {
-      var hasAbsorbedOtherTeams, hasTargetedEntity, isAttackingEnemy, isEnemy, isReclaimingShip;
+      var hasAbsorbedOtherTeams, hasTargetedEntity, isAttackingEnemy, isEnemy, isPoweringUpOwnAsset, isReclaimingLostPower, isReclaimingShip;
       isReclaimingShip = (function(_this) {
         return function() {
           return collision.obj.isA("Ship") && _this.entity.teamResource.isTeammate(collision.obj) && hasTargetedEntity();
@@ -19383,7 +19402,17 @@ Quintus.UI = function(Q) {
       })(this);
       isAttackingEnemy = (function(_this) {
         return function() {
-          return isEnemy() && hasTargetedEntity();
+          return _this.entity.p.canChangeTeams && isEnemy() && hasTargetedEntity();
+        };
+      })(this);
+      isPoweringUpOwnAsset = (function(_this) {
+        return function() {
+          return _this.entity.p.canChangeTeams === false && !isEnemy() && hasTargetedEntity();
+        };
+      })(this);
+      isReclaimingLostPower = (function(_this) {
+        return function() {
+          return isReclaimingShip() && hasAbsorbedOtherTeams();
         };
       })(this);
       if (collision.obj.isDestroyed) {
@@ -19392,7 +19421,10 @@ Quintus.UI = function(Q) {
       if (isAttackingEnemy()) {
         return this.absorb(collision.obj);
       }
-      if (isReclaimingShip() && hasAbsorbedOtherTeams()) {
+      if (isReclaimingLostPower()) {
+        return this.absorb(collision.obj);
+      }
+      if (isPoweringUpOwnAsset()) {
         return this.absorb(collision.obj);
       }
     }
@@ -19484,7 +19516,11 @@ Quintus.UI = function(Q) {
 
   Q.component('shipBuilder', {
     added: function() {
+      var base;
       this.timeSinceLastShipMS = 0;
+      if ((base = this.entity).step == null) {
+        base.step = function() {};
+      }
       this.entity.on('inserted', this, 'onInserted');
       this.entity.on('destroyed', this, 'stopBuilding');
       return this.entity.on('step', this, 'onStep');
@@ -19507,19 +19543,26 @@ Quintus.UI = function(Q) {
       return this.entity.p.buildRate || 1000;
     },
     onStep: function(dt) {
+      if (!this.entity.p.isBuilding) {
+        return;
+      }
       this.timeSinceLastShipMS += dt * 1000;
       if (this.timeSinceLastShipMS >= this.buildRate()) {
         return this.build();
       }
     },
     stopBuilding: function() {
-      return clearInterval(this.timer);
+      return this.entity.p.isBuilding = false;
+    },
+    startBuilding: function() {
+      return this.entity.p.isBuilding = true;
     },
     nextCoords: function() {
-      var defaultDistance, dist, ref, rotation, x, y;
+      var defaultDistance, dist, ref, rotation, scale, x, y;
+      scale = this.entity.p.scale || 1;
       defaultDistance = (function(_this) {
         return function() {
-          return (_this.entity.width() * _this.entity.p.scale / 2) + (10 * _this.entity.p.scale);
+          return (_this.entity.width() * scale / 2) + (10 * scale);
         };
       })(this);
       ref = this.entity.p, x = ref.x, y = ref.y;
@@ -19649,7 +19692,7 @@ Quintus.UI = function(Q) {
   })(Q.Evented);
 
   Game = (function() {
-    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/red/nebula_0.png", "planets/green/nebula_0.png", "planets/blue/nebula_0.png", "planets/red/nebula_1.png", "planets/green/nebula_1.png", "planets/blue/nebula_1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_explosion.mp3"];
+    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/red/nebula_0.png", "planets/green/nebula_0.png", "planets/blue/nebula_0.png", "planets/red/nebula_1.png", "planets/green/nebula_1.png", "planets/blue/nebula_1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_yard/blue.png", "ship_yard/red.png", "ship_yard/green.png", "ship_explosion.mp3"];
 
     Game.start = function() {
       if (this.started == null) {
@@ -20187,21 +20230,25 @@ Quintus.UI = function(Q) {
 
     Team.NONE = new Team({
       name: "None",
+      teamCollisionMask: 1,
       rgb: [65, 65, 65]
     });
 
     Team.RED = new Team({
       name: "Red",
+      teamCollisionMask: 2,
       rgb: [255, 0, 0]
     });
 
     Team.GREEN = new Team({
       name: "Green",
+      teamCollisionMask: 3,
       rgb: [45, 205, 45]
     });
 
     Team.BLUE = new Team({
       name: "Blue",
+      teamCollisionMask: 4,
       rgb: [0, 0, 255]
     });
 
@@ -20382,17 +20429,6 @@ Quintus.UI = function(Q) {
     }
   });
 
-  Q.Sprite.extend('BuildSite', {
-    init: function(p) {
-      this._super(p, {
-        asset: 'planets/nebula/blue.png',
-        type: Q.SPRITE_DEFAULT
-      });
-      this.p.x = this.asset().width * this.p.scale / 2 * -1;
-      return this.p.y = this.asset().height / 2 * -1;
-    }
-  });
-
   Q.Sprite.extend('Explosion', {
     init: function(p) {
       this._super(Q._extend({
@@ -20476,7 +20512,9 @@ Quintus.UI = function(Q) {
         team: Team.NONE,
         type: Q.SPRITE_DEFAULT,
         buildRate: 2000,
+        isBuilding: true,
         absorptionTarget: 50,
+        canChangeTeams: true,
         angle: Q.random(-45, 45)
       }, p));
       this.add('teamResource');
@@ -20522,7 +20560,7 @@ Quintus.UI = function(Q) {
       xy = dim / 2;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.3;
       ctx.drawImage(nebula, -xy, -xy, dim, dim);
       return ctx.restore();
     },
@@ -20613,7 +20651,7 @@ Quintus.UI = function(Q) {
       if (!((x != null) && (y != null))) {
         return false;
       }
-      radius = this.width() * this.p.scale / 2;
+      radius = this.width() * (this.p.scale || 1) / 2;
       dx = this.p.x - x;
       dy = this.p.y - y;
       rSum = radius + 1;
@@ -20788,6 +20826,7 @@ Quintus.UI = function(Q) {
       this.add('2d');
       this.add('teamResource');
       this.add('absorbable');
+      this.p.teamCollisionMask = this.p.team.teamCollisionMask;
       return this.on("hit.sprite", this, 'onCollision');
     },
     draw: function(ctx) {
@@ -20852,7 +20891,7 @@ Quintus.UI = function(Q) {
       if (!(t = this.currentTarget())) {
         return false;
       }
-      return t.obj === entity || entity.isInBounds(t.coords());
+      return t.obj === entity || (typeof entity.isInBounds === "function" ? entity.isInBounds(t.coords()) : void 0);
     },
     stop: function() {
       return this.p.vx = this.p.vy = 0;
@@ -20912,7 +20951,10 @@ Quintus.UI = function(Q) {
       yDistance = Q.offsetY(targetAngle, stepDistance);
       this.p.angle = targetAngle;
       this.p.vx = xDistance * Q.axis(targetAngle).x;
-      return this.p.vy = yDistance * Q.axis(targetAngle).y;
+      this.p.vy = yDistance * Q.axis(targetAngle).y;
+      if (this.wantsToGrow()) {
+        return delete this.p.teamCollisionMask;
+      }
     },
     moveAround: function() {
       var angle, dist, newAngle, path, ref, x, y;
@@ -20961,6 +21003,7 @@ Quintus.UI = function(Q) {
     absorbFriend: function(friend) {
       this.p.radius = this.p.absorptionValue = this.p.hitPoints = _.min([this.p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS]);
       this.p.h = this.p.w = this.p.radius * 2;
+      this.p.teamCollisionMask = this.teamResource.val().teamCollisionMask;
       return friend.destroy();
     },
     wantsToGrow: function() {
@@ -20976,7 +21019,7 @@ Quintus.UI = function(Q) {
       return Q.random(0, chances()) === 1;
     },
     onCollision: function(collision) {
-      var canAbsorb, isEnemyShip, isFriendlyShip, ref;
+      var isEnemyShip, isFriendlyShip, ref;
       if ((ref = collision.obj) != null ? ref.isDestroyed : void 0) {
         return;
       }
@@ -20993,17 +21036,71 @@ Quintus.UI = function(Q) {
           return collision.obj.isA("Ship") && _this.teamResource.isTeammate(collision.obj);
         };
       })(this);
-      canAbsorb = (function(_this) {
-        return function() {
-          return isFriendlyShip() && _this.wantsToGrow();
-        };
-      })(this);
       if (isEnemyShip()) {
         return this.damageWith(collision.obj);
       }
-      if (canAbsorb()) {
+      if (isFriendlyShip()) {
         return this.absorbFriend(collision.obj);
       }
+    }
+  });
+
+  Q.Sprite.extend('ShipYard', {
+    init: function(p) {
+      this._super(p, {
+        asset: 'ship_yard/green.png',
+        type: Q.SPRITE_DEFAULT,
+        sensor: true,
+        isBuilding: false,
+        buildRate: 6000,
+        canChangeTeams: false,
+        absorptionTarget: 250,
+        angle: Q.random(0, 360)
+      });
+      this.add('teamResource');
+      this.add('absorber');
+      this.add('shipBuilder');
+      this.on('absorption:target-met', this, 'onAbsorptionTargetMet');
+      return this.on('absorption:absorbed', this, 'onAbsorbed');
+    },
+    width: function() {
+      var ref, ref1;
+      return ((ref = this.asset()) != null ? ref.width : void 0) || ((ref1 = this.sheet()) != null ? ref1.tileW : void 0);
+    },
+    height: function() {
+      var ref, ref1;
+      return ((ref = this.asset()) != null ? ref.height : void 0) || ((ref1 = this.sheet()) != null ? ref1.tileH : void 0);
+    },
+    isInBounds: function(entityOrCoords) {
+      var dx, dy, rSum, radius, ref, ref1, x, y;
+      ref1 = (ref = Target.parse(entityOrCoords)) != null ? ref.coords() : void 0, x = ref1.x, y = ref1.y;
+      if (!((x != null) && (y != null))) {
+        return false;
+      }
+      radius = this.width() * (this.p.scale || 1) / 2;
+      dx = this.p.x - x;
+      dy = this.p.y - y;
+      rSum = radius + 1;
+      return (dx * dx) + (dy * dy) <= (rSum * rSum);
+    },
+    onAbsorptionTargetMet: function() {
+      return this.shipBuilder.startBuilding();
+    },
+    onAbsorbed: function(entity) {
+      return this.stage.insert(new Q.ShieldFlare({
+        x: this.p.x,
+        y: this.p.y,
+        color: entity.teamResource.val().color(0.8),
+        radius: (this.width() / 2 + 20) * (this.p.scale || 1)
+      }));
+    }
+  }, {
+    createWith: function(p) {
+      return {
+        on: function(stage) {
+          return stage.insert(new Q.ShipYard(p));
+        }
+      };
     }
   });
 
@@ -21075,6 +21172,7 @@ Quintus.UI = function(Q) {
 
     function Stage(QStage) {
       this.QStage = QStage;
+      this.onPress = bind(this.onPress, this);
       this.onZoomIn = bind(this.onZoomIn, this);
       this.onZoomOut = bind(this.onZoomOut, this);
       this.transitionTo = bind(this.transitionTo, this);
@@ -21085,6 +21183,11 @@ Quintus.UI = function(Q) {
       this.applyStrategy();
       this.addBackground();
       this.addPlanets();
+      window.setVP = (function(_this) {
+        return function(viewportTarget) {
+          _this.viewportTarget = viewportTarget;
+        };
+      })(this);
     }
 
     Stage.prototype.autoScale = function() {
@@ -21117,6 +21220,8 @@ Quintus.UI = function(Q) {
       var ref, ref1, ref2, x, y;
       this.QStage.add("viewport");
       this.QStage.add("selectionControls");
+      this.QStage.on("step", this, 'onStep');
+      Q.hammerTouchInput.on("press", this.onPress);
       Q.hammerTouchInput.on('zoom-out', this.onZoomOut);
       Q.hammerTouchInput.on('zoom-in', this.onZoomIn);
       ref1 = ((ref = this.viewport) != null ? ref.coords : void 0) || Q.center(), x = ref1.x, y = ref1.y;
@@ -21214,26 +21319,81 @@ Quintus.UI = function(Q) {
       return this.QStage.viewport.centerOn(coords.x, coords.y);
     };
 
+    Stage.prototype.onStep = function(dt) {
+      var ref, stepCoords, stepScale;
+      stepCoords = (function(_this) {
+        return function() {
+          var coords, maxStepDistance, ref, ref1, stepDistance, targetAngle, tripDistance, vX, vY, x, xDistance, y, yDistance;
+          ref1 = ((ref = _this.viewportTarget) != null ? ref.coords : void 0) || {}, x = ref1.x, y = ref1.y;
+          if (!((x != null) && (y != null))) {
+            return;
+          }
+          vX = _this.QStage.viewport.x;
+          vY = _this.QStage.viewport.y;
+          maxStepDistance = 40 * dt;
+          targetAngle = Q.angle(vX, vY, x, y);
+          tripDistance = Q.distance(vX, vY, x, y);
+          stepDistance = _.min([tripDistance, maxStepDistance]);
+          xDistance = Q.offsetX(targetAngle, stepDistance);
+          yDistance = Q.offsetY(targetAngle, stepDistance);
+          coords = {
+            x: (xDistance * Q.axis(targetAngle).x) + x,
+            y: (yDistance * Q.axis(targetAngle).y) + y
+          };
+          console.log('center', coords);
+          return _this.QStage.viewport.centerOn(coords.x, coords.y);
+        };
+      })(this);
+      stepScale = (function(_this) {
+        return function() {
+          var ref, remainingScale, scale, scaleStep;
+          if (!(scale = (ref = _this.viewportTarget) != null ? ref.scale : void 0)) {
+            return;
+          }
+          if (scale === _this.QStage.viewport.scale) {
+            return;
+          }
+          remainingScale = Math.abs(_this.QStage.viewport.scale - scale);
+          scaleStep = _.min([dt * 40, remainingScale]);
+          if (_this.QStage.viewport.scale > scale) {
+            scaleStep *= -1;
+          }
+          return _this.QStage.viewport.scale += scaleStep;
+        };
+      })(this);
+      stepScale();
+      stepCoords();
+      if (((ref = this.viewportTarget) != null ? ref.scale : void 0) === this.QStage.viewport.scale) {
+        return delete this.viewportTarget;
+      }
+    };
+
     Stage.prototype.zoomIncrementFor = function(velocity) {
-      return _.max([0.05, Math.abs(velocity)]);
+      return _.max([0.15, Math.abs(velocity)]);
     };
 
     Stage.prototype.onZoomOut = function(e) {
-      var center;
-      console.log('zoom-out');
-      this.QStage.viewport.scale = _.max([0.4, this.QStage.viewport.scale - this.zoomIncrementFor(e.velocity)]);
-      if (center = e.initialCenter) {
-        return this.stepViewportTo(center);
-      }
+      return this.viewportTarget != null ? this.viewportTarget : this.viewportTarget = {
+        scale: _.max([0.2, this.QStage.viewport.scale - this.zoomIncrementFor(e.velocity)]),
+        coords: e.initialCenter
+      };
     };
 
     Stage.prototype.onZoomIn = function(e) {
-      var center;
-      console.log('zoom-in');
-      this.QStage.viewport.scale = _.min([1.4, this.QStage.viewport.scale + this.zoomIncrementFor(e.velocity)]);
-      if (center = e.initialCenter) {
-        return this.stepViewportTo(center);
-      }
+      return this.viewportTarget != null ? this.viewportTarget : this.viewportTarget = {
+        scale: _.min([3, this.QStage.viewport.scale + this.zoomIncrementFor(e.velocity)]),
+        coords: e.initialCenter
+      };
+    };
+
+    Stage.prototype.onPress = function(e) {
+      var props;
+      props = {
+        x: e.p.x,
+        y: e.p.y,
+        team: Game.instance.playerTeam
+      };
+      return Q.ShipYard.createWith(props).on(this.QStage);
     };
 
     return Stage;
@@ -21258,13 +21418,15 @@ Quintus.UI = function(Q) {
       {
         x: 500,
         y: 200,
-        startingShipCount: 1,
-        team: Team.BLUE
+        startingShipCount: 0,
+        team: Team.BLUE,
+        isBuilding: false
       }, {
         x: 500,
         y: 400,
-        startingShipCount: 50,
-        team: Team.GREEN
+        startingShipCount: 250,
+        team: Team.GREEN,
+        isBuilding: false
       }
     ];
 

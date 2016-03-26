@@ -26,6 +26,7 @@ Q.Sprite.extend "Ship",
     @add 'teamResource'
     @add 'absorbable'
 
+    @p.teamCollisionMask = @p.team.teamCollisionMask
     @on "hit.sprite", @, 'onCollision'
 
   draw: (ctx) ->
@@ -94,7 +95,7 @@ Q.Sprite.extend "Ship",
 
   hasTargeted: (entity) ->
     return false unless t = @currentTarget()
-    t.obj is entity or entity.isInBounds( t.coords() )
+    t.obj is entity or entity.isInBounds?( t.coords() )
 
   stop: ->
     @p.vx = @p.vy = 0
@@ -146,6 +147,8 @@ Q.Sprite.extend "Ship",
     @p.vx    = xDistance * Q.axis(targetAngle).x
     @p.vy    = yDistance * Q.axis(targetAngle).y
 
+    delete @p.teamCollisionMask if @wantsToGrow()
+
   moveAround: ->
     { x, y, path, angle } = @p
 
@@ -190,6 +193,7 @@ Q.Sprite.extend "Ship",
   absorbFriend: ( friend ) ->
     @p.radius = @p.absorptionValue = @p.hitPoints = _.min [ @p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS ]
     @p.h = @p.w = @p.radius * 2
+    @p.teamCollisionMask = @teamResource.val().teamCollisionMask
     friend.destroy()
 
   wantsToGrow: ->
@@ -209,9 +213,6 @@ Q.Sprite.extend "Ship",
     isFriendlyShip = =>
       collision.obj.isA("Ship") and @teamResource.isTeammate( collision.obj )
 
-    canAbsorb = =>
-      isFriendlyShip() and @wantsToGrow()
-
     return @damageWith( collision.obj )   if isEnemyShip()
-    return @absorbFriend( collision.obj ) if canAbsorb()
+    return @absorbFriend( collision.obj ) if isFriendlyShip()
 
