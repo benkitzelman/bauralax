@@ -7,7 +7,7 @@ Q.Sprite.extend 'ShipYard',
       isBuilding       : false
       buildRate        : 6000
       canChangeTeams   : false
-      absorptionTarget : 100
+      absorptionTarget : 50
       angle            : Q.random(0, 360)
 
     @p.radius = @width() * (@p.scale or 1) / 2
@@ -49,15 +49,40 @@ Q.Sprite.extend 'ShipYard',
   onAbsorptionTargetMet: ->
     @shipBuilder.startBuilding()
 
-    @stage.insert new Q.ShieldFlare
-      x           : @p.x
-      y           : @p.y
-      color       : @p.team.color(0.8)
-      radius      : @p.radius + 5
-      opacityRate : 0
-
   onAbsorbed: (entity) ->
     @explode() if @absorber.absorber() isnt @p.team
+
+  draw: (ctx) ->
+    drawImage = =>
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.drawImage @asset(), -@p.cx, -@p.cy
+      ctx.restore()
+
+    drawShields = =>
+      flareWidth = _.min [ 20, @p.radius * .5 ]
+      outer      = @p.radius + 7
+      inner      = outer - flareWidth
+
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.beginPath()
+
+      ctx.arc 0, 0, outer, 0, 180
+
+      grd = ctx.createRadialGradient 0, 0, outer, 0, 0, inner
+      grd.addColorStop 0, @p.team.color(0.8)
+      grd.addColorStop 1, "transparent"
+      ctx.fillStyle = grd
+      ctx.fill()
+
+      ctx.closePath()
+      ctx.restore()
+    #--
+
+    drawImage()
+    drawShields() if @shipBuilder.isBuilding()
+
 ,
   createWith: (p) ->
     on: (stage) ->

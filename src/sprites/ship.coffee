@@ -26,8 +26,8 @@ Q.Sprite.extend "Ship",
     @add 'teamResource'
     @add 'absorbable'
 
-    @p.teamCollisionMask = @p.team.teamCollisionMask
     @on "hit.sprite", @, 'onCollision'
+    @teamResource.ignoreCollisionsWith 'Ship'
 
   draw: (ctx) ->
     @drawShip ctx
@@ -149,7 +149,7 @@ Q.Sprite.extend "Ship",
     @p.vx    = xDistance * Q.axis(targetAngle).x
     @p.vy    = yDistance * Q.axis(targetAngle).y
 
-    delete @p.teamCollisionMask if @wantsToGrow()
+    @teamResource.allowCollisionsWith('Ship') if @wantsToGrow()
 
   moveAround: ->
     { x, y, path, angle } = @p
@@ -195,7 +195,7 @@ Q.Sprite.extend "Ship",
   absorbFriend: ( friend ) ->
     @p.radius = @p.absorptionValue = @p.hitPoints = _.min [ @p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS ]
     @p.h = @p.w = @p.radius * 2
-    @p.teamCollisionMask = @teamResource.val().teamCollisionMask
+    @teamResource.ignoreCollisionsWith('Ship')
     friend.destroy()
 
   wantsToGrow: ->

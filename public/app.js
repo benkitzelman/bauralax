@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-03-26
+/*! bauralux - v1.0.0 - 2016-03-27
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -19197,8 +19197,10 @@ Quintus.UI = function(Q) {
     var defaultStrategy;
     defaultStrategy = Q.collision;
     return Q.collision = function(o1, o2) {
-      var ref, ref1;
-      if ((o1 != null ? (ref = o1.p) != null ? ref.teamCollisionMask : void 0 : void 0) && o1.p.teamCollisionMask === (o2 != null ? (ref1 = o2.p) != null ? ref1.teamCollisionMask : void 0 : void 0)) {
+      var masks1, masks2, ref, ref1;
+      masks1 = (ref = o1.p.teamCollisionMask) != null ? ref[o2.className] : void 0;
+      masks2 = (ref1 = o2.p.teamCollisionMask) != null ? ref1[o1.className] : void 0;
+      if ((masks1 != null) && (masks2 != null) && masks1 === masks2) {
         return;
       }
       return defaultStrategy(o1, o2);
@@ -19443,7 +19445,6 @@ Quintus.UI = function(Q) {
       this.input.on('touch-drag-change', this, 'drawSelection');
       this.input.on('touch-drag-end', this, 'removeSelection');
       this.input.on('touch', this, 'moveShips');
-      this.input.on('press', this, 'startBuildSite');
       return this.stage.on('destroyed', this, 'destroy');
     },
     destroy: function() {
@@ -19506,17 +19507,6 @@ Quintus.UI = function(Q) {
       group.moveTo(e.p);
       group.invoke('deselect');
       return group.reset();
-    },
-    startBuildSite: function(e) {
-      var group, site;
-      if ((group = this.selections()).isEmpty()) {
-        return;
-      }
-      this.stage.insert(site = new Q.BuildSite({
-        x: e.p.x,
-        y: e.p.y
-      }));
-      return site;
     }
   });
 
@@ -19559,6 +19549,9 @@ Quintus.UI = function(Q) {
     },
     stopBuilding: function() {
       return this.entity.p.isBuilding = false;
+    },
+    isBuilding: function() {
+      return this.entity.p.isBuilding;
     },
     startBuilding: function() {
       return this.entity.p.isBuilding = true;
@@ -19626,6 +19619,17 @@ Quintus.UI = function(Q) {
     },
     belongsToPlayer: function() {
       return G.playerTeam === this.val();
+    },
+    allowCollisionsWith: function(spriteType) {
+      return delete this.entity.p.teamCollisionMask[spriteType];
+    },
+    ignoreCollisionsWith: function(spriteType) {
+      var base, maskVal;
+      maskVal = this.val().collisionMasks[spriteType];
+      if ((base = this.entity.p).teamCollisionMask == null) {
+        base.teamCollisionMask = {};
+      }
+      return this.entity.p.teamCollisionMask[spriteType] = maskVal;
     }
   });
 
@@ -20104,6 +20108,13 @@ Quintus.UI = function(Q) {
       var fn, sprites;
       sprites = [];
       return fn = {
+        planet: (function(_this) {
+          return function() {
+            var ref;
+            sprites = (ref = Q.select('Planet')) != null ? ref.items : void 0;
+            return fn;
+          };
+        })(this),
         enemyShipYard: (function(_this) {
           return function() {
             sprites = _.flatten(_.values(_this.enemyShipYards()));
@@ -20122,10 +20133,32 @@ Quintus.UI = function(Q) {
             return fn;
           };
         })(this),
+        enemyShipBuilder: (function(_this) {
+          return function() {
+            sprites = _.flatten(_.map([_this.enemyShipYards(), _this.enemyPlanets()], _.values));
+            return fn;
+          };
+        })(this),
         unoccupiedPlanet: (function(_this) {
           return function() {
             sprites = _this.unoccupiedPlanets();
             return fn;
+          };
+        })(this),
+        withLowestAbsorptionCost: (function(_this) {
+          return function(target) {
+            return _.first(_.sortBy(sprites, function(s) {
+              var ref, sortVal, x, y;
+              sortVal = s.absorber.absorbedValue();
+              if (s.absorber.absorber() === _this.team) {
+                sortVal *= -1;
+              }
+              if (target) {
+                ref = target.coords(), x = ref.x, y = ref.y;
+                sortVal += Q.distance(x, y, s.p.x, s.p.y);
+              }
+              return sortVal;
+            }));
           };
         })(this),
         to: function(target) {
@@ -20157,7 +20190,7 @@ Quintus.UI = function(Q) {
       return _.each(this.ownPlanets(), (function(_this) {
         return function(planet) {
           var shipGroup;
-          shipGroup = _this.idleShipsFrom(planet);
+          shipGroup = _this.idleShips();
           if (!(shipGroup.hitPoints() >= _this.team.attackGroupStrength)) {
             return;
           }
@@ -20172,20 +20205,25 @@ Quintus.UI = function(Q) {
       return new ShipGroup(AggressiveTeam.__super__.idleShipsFrom.call(this, planet));
     };
 
+    AggressiveTeam.prototype.idleShips = function() {
+      return new ShipGroup(AggressiveTeam.__super__.idleShips.call(this));
+    };
+
     AggressiveTeam.prototype.bestTargetFor = function(sprite) {
       var target;
       target = Target.parse(sprite);
-      return this.closest().unoccupiedPlanet().to(target) || this.closest().enemyShipYard().to(target) || this.closest().enemyPlanet().to(target);
+      return this.closest().unoccupiedPlanet().to(target) || this.closest().enemyShipBuilder().withLowestAbsorptionCost(target);
     };
 
     AggressiveTeam.prototype.onPlanetLost = function(arg) {
-      var group, planet;
+      var group, planet, target;
       planet = arg.planet;
       if (this.ownPlanets().length !== 0) {
         return;
       }
       group = new ShipGroup(this.ownShips());
-      return group.moveTo(this.bestTargetFor(group));
+      target = this.closest().planet().withLowestAbsorptionCost();
+      return group.moveTo(target);
     };
 
     return AggressiveTeam;
@@ -20250,30 +20288,32 @@ Quintus.UI = function(Q) {
 
     Team.NONE = new Team({
       name: "None",
-      teamCollisionMask: 1,
       rgb: [65, 65, 65]
     });
 
     Team.RED = new Team({
       name: "Red",
-      teamCollisionMask: 2,
       rgb: [255, 0, 0]
     });
 
     Team.GREEN = new Team({
       name: "Green",
-      teamCollisionMask: 3,
       rgb: [45, 205, 45]
     });
 
     Team.BLUE = new Team({
       name: "Blue",
-      teamCollisionMask: 4,
       rgb: [0, 0, 255]
     });
 
     function Team(params) {
-      _.extend(this, params);
+      _.extend(this, params, {
+        collisionMasks: {
+          Ship: Q._uniqueId(),
+          Planet: Q._uniqueId(),
+          ShipYard: Q._uniqueId()
+        }
+      });
       if (this.strategy) {
         this.useStrategy(this.strategy);
       }
@@ -20848,8 +20888,8 @@ Quintus.UI = function(Q) {
       this.add('2d');
       this.add('teamResource');
       this.add('absorbable');
-      this.p.teamCollisionMask = this.p.team.teamCollisionMask;
-      return this.on("hit.sprite", this, 'onCollision');
+      this.on("hit.sprite", this, 'onCollision');
+      return this.teamResource.ignoreCollisionsWith('Ship');
     },
     draw: function(ctx) {
       this.drawShip(ctx);
@@ -20976,7 +21016,7 @@ Quintus.UI = function(Q) {
       this.p.vx = xDistance * Q.axis(targetAngle).x;
       this.p.vy = yDistance * Q.axis(targetAngle).y;
       if (this.wantsToGrow()) {
-        return delete this.p.teamCollisionMask;
+        return this.teamResource.allowCollisionsWith('Ship');
       }
     },
     moveAround: function() {
@@ -21026,7 +21066,7 @@ Quintus.UI = function(Q) {
     absorbFriend: function(friend) {
       this.p.radius = this.p.absorptionValue = this.p.hitPoints = _.min([this.p.hitPoints + friend.p.hitPoints, MAX_HIT_POINTS]);
       this.p.h = this.p.w = this.p.radius * 2;
-      this.p.teamCollisionMask = this.teamResource.val().teamCollisionMask;
+      this.teamResource.ignoreCollisionsWith('Ship');
       return friend.destroy();
     },
     wantsToGrow: function() {
@@ -21077,7 +21117,7 @@ Quintus.UI = function(Q) {
         isBuilding: false,
         buildRate: 6000,
         canChangeTeams: false,
-        absorptionTarget: 100,
+        absorptionTarget: 50,
         angle: Q.random(0, 360)
       });
       this.p.radius = this.width() * (this.p.scale || 1) / 2;
@@ -21119,18 +21159,45 @@ Quintus.UI = function(Q) {
       return this.destroy();
     },
     onAbsorptionTargetMet: function() {
-      this.shipBuilder.startBuilding();
-      return this.stage.insert(new Q.ShieldFlare({
-        x: this.p.x,
-        y: this.p.y,
-        color: this.p.team.color(0.8),
-        radius: this.p.radius + 5,
-        opacityRate: 0
-      }));
+      return this.shipBuilder.startBuilding();
     },
     onAbsorbed: function(entity) {
       if (this.absorber.absorber() !== this.p.team) {
         return this.explode();
+      }
+    },
+    draw: function(ctx) {
+      var drawImage, drawShields;
+      drawImage = (function(_this) {
+        return function() {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.drawImage(_this.asset(), -_this.p.cx, -_this.p.cy);
+          return ctx.restore();
+        };
+      })(this);
+      drawShields = (function(_this) {
+        return function() {
+          var flareWidth, grd, inner, outer;
+          flareWidth = _.min([20, _this.p.radius * .5]);
+          outer = _this.p.radius + 7;
+          inner = outer - flareWidth;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.beginPath();
+          ctx.arc(0, 0, outer, 0, 180);
+          grd = ctx.createRadialGradient(0, 0, outer, 0, 0, inner);
+          grd.addColorStop(0, _this.p.team.color(0.8));
+          grd.addColorStop(1, "transparent");
+          ctx.fillStyle = grd;
+          ctx.fill();
+          ctx.closePath();
+          return ctx.restore();
+        };
+      })(this);
+      drawImage();
+      if (this.shipBuilder.isBuilding()) {
+        return drawShields();
       }
     }
   }, {

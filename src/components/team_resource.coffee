@@ -18,3 +18,11 @@ Q.component 'teamResource',
 
   belongsToPlayer: ->
     G.playerTeam is @val()
+
+  allowCollisionsWith: (spriteType) ->
+    delete @entity.p.teamCollisionMask[ spriteType ]
+
+  ignoreCollisionsWith: (spriteType) ->
+    maskVal = @val().collisionMasks[ spriteType ]
+    @entity.p.teamCollisionMask ?= {}
+    @entity.p.teamCollisionMask[ spriteType ] = maskVal

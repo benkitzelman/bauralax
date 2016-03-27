@@ -36,6 +36,10 @@ class TeamStrategy
   closest: ->
     sprites = []
     fn =
+      planet: =>
+        sprites = Q.select( 'Planet' )?.items
+        fn
+
       enemyShipYard: =>
         sprites = _.flatten _.values @enemyShipYards()
         fn
@@ -48,13 +52,31 @@ class TeamStrategy
         sprites = _.flatten _.values @enemyShips()
         fn
 
+      enemyShipBuilder: =>
+        sprites = _.flatten _.map( [ @enemyShipYards(), @enemyPlanets() ], _.values )
+        fn
+
       unoccupiedPlanet: =>
         sprites = @unoccupiedPlanets()
         fn
+
+      withLowestAbsorptionCost: (target) =>
+        _.first _.sortBy(sprites , (s) =>
+
+          sortVal  = s.absorber.absorbedValue()
+          sortVal *= -1 if s.absorber.absorber() is @team
+
+          if target
+            { x, y } = target.coords()
+            sortVal += Q.distance( x, y, s.p.x, s.p.y )
+
+          sortVal
+        )
 
       to: (target) ->
         { x, y } = target.coords()
         _.first _.sortBy(sprites, (s) ->
           Q.distance( x, y, s.p.x, s.p.y )
         )
+
 

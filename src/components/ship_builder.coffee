@@ -22,6 +22,9 @@ Q.component 'shipBuilder',
   stopBuilding: ->
     @entity.p.isBuilding = false
 
+  isBuilding: ->
+    @entity.p.isBuilding
+
   startBuilding: ->
     @entity.p.isBuilding = true
 

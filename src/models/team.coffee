@@ -1,14 +1,19 @@
 class Team extends Q.Evented
-  @NONE  = new Team(name: "None",  teamCollisionMask: 1, rgb: [65, 65, 65])
-  @RED   = new Team(name: "Red",   teamCollisionMask: 2, rgb: [255, 0, 0])
-  @GREEN = new Team(name: "Green", teamCollisionMask: 3, rgb: [45, 205, 45])
-  @BLUE  = new Team(name: "Blue",  teamCollisionMask: 4, rgb: [0, 0, 255])
+  @NONE  = new Team(name: "None",  rgb: [65, 65, 65])
+  @RED   = new Team(name: "Red",   rgb: [255, 0, 0])
+  @GREEN = new Team(name: "Green", rgb: [45, 205, 45])
+  @BLUE  = new Team(name: "Blue",  rgb: [0, 0, 255])
 
   constructor: (params) ->
-    _.extend @, params
+    _.extend @, params,
+      collisionMasks:
+        Ship     : Q._uniqueId()
+        Planet   : Q._uniqueId()
+        ShipYard : Q._uniqueId()
+
     @useStrategy( @strategy ) if @strategy
 
-  color: (opacity = 1)->
+  color: (opacity = 1) ->
     "rgba(#{ @rgb.join(',') }, #{opacity})"
 
   useStrategy: (TeamStrategyClass) ->
