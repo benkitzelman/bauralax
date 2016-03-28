@@ -43,8 +43,9 @@ Q.Sprite.extend "Planet",
     "planets/none/#{ asset }"
 
   updateForTeam: ->
-    @p.texture = @randomTeamTexture()
-    @p.nebulaTexture = @randomTeamTexture('nebula')
+    @p.texture       = @randomTeamTexture()
+    @p.nebulaTexture = @randomTeamTexture 'nebula'
+    @teamResource.ignoreCollisionsWith 'Ship'
 
   draw: (ctx) ->
     @drawNebula ctx
@@ -176,3 +177,8 @@ Q.Sprite.extend "Planet",
       y      : @p.y
       color  : entity.teamResource.val().color(0.8)
       radius : (@radius() + 20 ) * @p.scale
+
+    if @absorber.absorbedPerc() < 1
+      @teamResource.allowCollisionsWith 'Ship'
+    else
+      @teamResource.ignoreCollisionsWith 'Ship'

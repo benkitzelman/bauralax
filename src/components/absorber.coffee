@@ -22,8 +22,7 @@ Q.component 'absorber',
 
   absorb: (sprite) ->
     return unless @canBeAbsorbed( sprite )
-    return if @absorbedPerc() >= 1
-    
+
     @absorbed.push(sprite: sprite, team: sprite.teamResource.val(), val: @valueFor( sprite ) )
     sprite.absorbable.absorb @entity
     @updateProgressBar()
@@ -96,6 +95,8 @@ Q.component 'absorber',
 
     return if collision.obj.isDestroyed
     return @absorb( collision.obj ) if isAttackingEnemy()
+    return if @absorbedPerc() >= 1
+
     return @absorb( collision.obj ) if isReclaimingLostPower()
     return @absorb( collision.obj ) if isPoweringUpOwnAsset()
 

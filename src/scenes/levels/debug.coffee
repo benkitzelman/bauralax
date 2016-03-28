@@ -10,3 +10,14 @@ class StageDebug extends Stage
   enemyStrategem:
     BLUE : { strategy: AggressiveTeam }
 
+
+  constructor: (@QStage) ->
+    super
+    props = 
+      x      : 500
+      y      : 300
+      team   : Team.BLUE
+      isBuilding: true
+
+    yard = Q.ShipYard.createWith( props ).on( @QStage )
+    yard.absorber.absorbed.push(sprite: null, team: Team.BLUE, val: 50 )

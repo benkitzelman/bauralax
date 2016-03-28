@@ -86,4 +86,6 @@ Q.Sprite.extend 'ShipYard',
 ,
   createWith: (p) ->
     on: (stage) ->
-      stage.insert( new Q.ShipYard p )
+      shipYard = new Q.ShipYard p
+      stage.insert( shipYard )
+      shipYard

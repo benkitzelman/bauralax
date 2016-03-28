@@ -1,7 +1,7 @@
 Q.component 'teamResource',
-
   added: ->
     @entity.p.isTeamResource = true
+    @q = new Resources @val()
 
   val: (v) ->
     if v

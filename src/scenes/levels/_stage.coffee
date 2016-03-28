@@ -113,7 +113,6 @@ class Stage extends Scene
         x: ( xDistance * Q.axis( targetAngle ).x ) + x
         y: ( yDistance * Q.axis( targetAngle ).y ) + y
 
-      console.log 'center', coords
       # @QStage.viewport.x = coords.x
       # @QStage.viewport.y = coords.y
       @QStage.viewport.centerOn coords.x, coords.y

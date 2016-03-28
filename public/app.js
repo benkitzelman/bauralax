@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-03-27
+/*! bauralux - v1.0.0 - 2016-03-28
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -18944,7 +18944,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, LevelSelect, MAX_HIT_POINTS, Menu, Path, Scene, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, LevelSelect, MAX_HIT_POINTS, Menu, Path, Resources, Scene, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
@@ -19197,13 +19197,13 @@ Quintus.UI = function(Q) {
     var defaultStrategy;
     defaultStrategy = Q.collision;
     return Q.collision = function(o1, o2) {
-      var masks1, masks2, ref, ref1;
-      masks1 = (ref = o1.p.teamCollisionMask) != null ? ref[o2.className] : void 0;
-      masks2 = (ref1 = o2.p.teamCollisionMask) != null ? ref1[o1.className] : void 0;
-      if ((masks1 != null) && (masks2 != null) && masks1 === masks2) {
-        return;
+      var hasMaskedCollision, isSameTeam, ref, ref1;
+      if (!(isSameTeam = o1.p.team && o2.p.team && o1.p.team === o2.p.team)) {
+        return defaultStrategy(o1, o2);
       }
-      return defaultStrategy(o1, o2);
+      if (!(hasMaskedCollision = ((ref = o1.p.teamCollisionMask) != null ? ref[o2.className] : void 0) || ((ref1 = o2.p.teamCollisionMask) != null ? ref1[o1.className] : void 0))) {
+        return defaultStrategy(o1, o2);
+      }
     };
   };
 
@@ -19323,9 +19323,6 @@ Quintus.UI = function(Q) {
       if (!this.canBeAbsorbed(sprite)) {
         return;
       }
-      if (this.absorbedPerc() >= 1) {
-        return;
-      }
       this.absorbed.push({
         sprite: sprite,
         team: sprite.teamResource.val(),
@@ -19428,6 +19425,9 @@ Quintus.UI = function(Q) {
       }
       if (isAttackingEnemy()) {
         return this.absorb(collision.obj);
+      }
+      if (this.absorbedPerc() >= 1) {
+        return;
       }
       if (isReclaimingLostPower()) {
         return this.absorb(collision.obj);
@@ -19598,7 +19598,8 @@ Quintus.UI = function(Q) {
 
   Q.component('teamResource', {
     added: function() {
-      return this.entity.p.isTeamResource = true;
+      this.entity.p.isTeamResource = true;
+      return this.q = new Resources(this.val());
     },
     val: function(v) {
       if (v) {
@@ -19887,6 +19888,161 @@ Quintus.UI = function(Q) {
 
   })();
 
+  Resources = (function() {
+    function Resources(team1) {
+      this.team = team1;
+    }
+
+    Resources.prototype.enemyResources = function(type) {
+      var ref, resources;
+      resources = _.select((ref = Q.select(type)) != null ? ref.items : void 0, (function(_this) {
+        return function(s) {
+          var ref1;
+          return (ref1 = s.teamResource.val()) !== _this.team && ref1 !== Team.NONE;
+        };
+      })(this));
+      return _.groupBy(resources, function(r) {
+        var ref1;
+        return (ref1 = r.teamResource.val()) != null ? ref1.name : void 0;
+      });
+    };
+
+    Resources.prototype.teamResources = function(team, type) {
+      var ref;
+      return _.select((ref = Q.select(type)) != null ? ref.items : void 0, function(s) {
+        return s.teamResource.val() === team;
+      });
+    };
+
+    Resources.prototype.teamShips = function(team) {
+      return this.teamResources(team, "Ship");
+    };
+
+    Resources.prototype.teamPlanets = function(team) {
+      return this.teamResources(team, "Planet");
+    };
+
+    Resources.prototype.ownResources = function(type) {
+      return this.teamResources(this.team, type);
+    };
+
+    Resources.prototype.ownShips = function() {
+      return this.ownResources("Ship");
+    };
+
+    Resources.prototype.ownPlanets = function() {
+      return this.ownResources("Planet");
+    };
+
+    Resources.prototype.ownShipYards = function() {
+      return this.ownResources("ShipYard");
+    };
+
+    Resources.prototype.enemyShips = function() {
+      return this.enemyResources("Ship");
+    };
+
+    Resources.prototype.enemyPlanets = function() {
+      return this.enemyResources("Planet");
+    };
+
+    Resources.prototype.enemyShipYards = function() {
+      return this.enemyResources("ShipYard");
+    };
+
+    Resources.prototype.unoccupiedPlanets = function() {
+      return this.teamResources(Team.NONE, "Planet");
+    };
+
+    Resources.prototype.idleShips = function() {
+      return _.select(this.ownShips(), function(s) {
+        return s.isIdle();
+      });
+    };
+
+    Resources.prototype.shipsFrom = function(planet) {
+      return _.select(this.ownShips(), {
+        builder: planet
+      });
+    };
+
+    Resources.prototype.idleShipsFrom = function(planet) {
+      return _.select(this.shipsFrom(planet), function(s) {
+        return s.isIdle();
+      });
+    };
+
+    Resources.prototype.closest = function() {
+      var fn, sprites;
+      sprites = [];
+      return fn = {
+        planet: (function(_this) {
+          return function() {
+            var ref;
+            sprites = (ref = Q.select('Planet')) != null ? ref.items : void 0;
+            return fn;
+          };
+        })(this),
+        enemyShipYard: (function(_this) {
+          return function() {
+            sprites = _.flatten(_.values(_this.enemyShipYards()));
+            return fn;
+          };
+        })(this),
+        enemyPlanet: (function(_this) {
+          return function() {
+            sprites = _.flatten(_.values(_this.enemyPlanets()));
+            return fn;
+          };
+        })(this),
+        enemyShip: (function(_this) {
+          return function() {
+            sprites = _.flatten(_.values(_this.enemyShips()));
+            return fn;
+          };
+        })(this),
+        enemyShipBuilder: (function(_this) {
+          return function() {
+            sprites = _.flatten(_.map([_this.enemyShipYards(), _this.enemyPlanets()], _.values));
+            return fn;
+          };
+        })(this),
+        unoccupiedPlanet: (function(_this) {
+          return function() {
+            sprites = _this.unoccupiedPlanets();
+            return fn;
+          };
+        })(this),
+        withLowestAbsorptionCost: (function(_this) {
+          return function(target) {
+            return _.first(_.sortBy(sprites, function(s) {
+              var ref, sortVal, x, y;
+              sortVal = s.absorber.absorbedValue();
+              if (s.absorber.absorber() === _this.team) {
+                sortVal *= -1;
+              }
+              if (target) {
+                ref = target.coords(), x = ref.x, y = ref.y;
+                sortVal += Q.distance(x, y, s.p.x, s.p.y);
+              }
+              return sortVal;
+            }));
+          };
+        })(this),
+        to: function(target) {
+          var ref, x, y;
+          ref = target.coords(), x = ref.x, y = ref.y;
+          return _.first(_.sortBy(sprites, function(s) {
+            return Q.distance(x, y, s.p.x, s.p.y);
+          }));
+        }
+      };
+    };
+
+    return Resources;
+
+  })();
+
   ShipGroup = (function(superClass) {
     extend(ShipGroup, superClass);
 
@@ -20006,9 +20162,12 @@ Quintus.UI = function(Q) {
 
   })(Collection);
 
-  TeamStrategy = (function() {
+  TeamStrategy = (function(superClass) {
+    extend(TeamStrategy, superClass);
+
     function TeamStrategy(team1) {
       this.team = team1;
+      TeamStrategy.__super__.constructor.call(this, this.team);
       this.bindEvents();
     }
 
@@ -20025,155 +20184,9 @@ Quintus.UI = function(Q) {
 
     TeamStrategy.prototype.onPlanetLost = function(planet) {};
 
-    TeamStrategy.prototype.enemyResources = function(type) {
-      var ref, resources;
-      resources = _.select((ref = Q.select(type)) != null ? ref.items : void 0, (function(_this) {
-        return function(s) {
-          var ref1;
-          return (ref1 = s.teamResource.val()) !== _this.team && ref1 !== Team.NONE;
-        };
-      })(this));
-      return _.groupBy(resources, function(r) {
-        var ref1;
-        return (ref1 = r.teamResource.val()) != null ? ref1.name : void 0;
-      });
-    };
-
-    TeamStrategy.prototype.teamResources = function(team, type) {
-      var ref;
-      return _.select((ref = Q.select(type)) != null ? ref.items : void 0, function(s) {
-        return s.teamResource.val() === team;
-      });
-    };
-
-    TeamStrategy.prototype.teamShips = function(team) {
-      return this.teamResources(team, "Ship");
-    };
-
-    TeamStrategy.prototype.teamPlanets = function(team) {
-      return this.teamResources(team, "Planet");
-    };
-
-    TeamStrategy.prototype.ownResources = function(type) {
-      return this.teamResources(this.team, type);
-    };
-
-    TeamStrategy.prototype.ownShips = function() {
-      return this.ownResources("Ship");
-    };
-
-    TeamStrategy.prototype.ownPlanets = function() {
-      return this.ownResources("Planet");
-    };
-
-    TeamStrategy.prototype.ownShipYards = function() {
-      return this.ownResources("ShipYard");
-    };
-
-    TeamStrategy.prototype.enemyShips = function() {
-      return this.enemyResources("Ship");
-    };
-
-    TeamStrategy.prototype.enemyPlanets = function() {
-      return this.enemyResources("Planet");
-    };
-
-    TeamStrategy.prototype.enemyShipYards = function() {
-      return this.enemyResources("ShipYard");
-    };
-
-    TeamStrategy.prototype.unoccupiedPlanets = function() {
-      return this.teamResources(Team.NONE, "Planet");
-    };
-
-    TeamStrategy.prototype.idleShips = function() {
-      return _.select(this.ownShips(), function(s) {
-        return s.isIdle();
-      });
-    };
-
-    TeamStrategy.prototype.shipsFrom = function(planet) {
-      return _.select(this.ownShips(), {
-        builder: planet
-      });
-    };
-
-    TeamStrategy.prototype.idleShipsFrom = function(planet) {
-      return _.select(this.shipsFrom(planet), function(s) {
-        return s.isIdle();
-      });
-    };
-
-    TeamStrategy.prototype.closest = function() {
-      var fn, sprites;
-      sprites = [];
-      return fn = {
-        planet: (function(_this) {
-          return function() {
-            var ref;
-            sprites = (ref = Q.select('Planet')) != null ? ref.items : void 0;
-            return fn;
-          };
-        })(this),
-        enemyShipYard: (function(_this) {
-          return function() {
-            sprites = _.flatten(_.values(_this.enemyShipYards()));
-            return fn;
-          };
-        })(this),
-        enemyPlanet: (function(_this) {
-          return function() {
-            sprites = _.flatten(_.values(_this.enemyPlanets()));
-            return fn;
-          };
-        })(this),
-        enemyShip: (function(_this) {
-          return function() {
-            sprites = _.flatten(_.values(_this.enemyShips()));
-            return fn;
-          };
-        })(this),
-        enemyShipBuilder: (function(_this) {
-          return function() {
-            sprites = _.flatten(_.map([_this.enemyShipYards(), _this.enemyPlanets()], _.values));
-            return fn;
-          };
-        })(this),
-        unoccupiedPlanet: (function(_this) {
-          return function() {
-            sprites = _this.unoccupiedPlanets();
-            return fn;
-          };
-        })(this),
-        withLowestAbsorptionCost: (function(_this) {
-          return function(target) {
-            return _.first(_.sortBy(sprites, function(s) {
-              var ref, sortVal, x, y;
-              sortVal = s.absorber.absorbedValue();
-              if (s.absorber.absorber() === _this.team) {
-                sortVal *= -1;
-              }
-              if (target) {
-                ref = target.coords(), x = ref.x, y = ref.y;
-                sortVal += Q.distance(x, y, s.p.x, s.p.y);
-              }
-              return sortVal;
-            }));
-          };
-        })(this),
-        to: function(target) {
-          var ref, x, y;
-          ref = target.coords(), x = ref.x, y = ref.y;
-          return _.first(_.sortBy(sprites, function(s) {
-            return Q.distance(x, y, s.p.x, s.p.y);
-          }));
-        }
-      };
-    };
-
     return TeamStrategy;
 
-  })();
+  })(Resources);
 
   AggressiveTeam = (function(superClass) {
     extend(AggressiveTeam, superClass);
@@ -20603,7 +20616,8 @@ Quintus.UI = function(Q) {
     },
     updateForTeam: function() {
       this.p.texture = this.randomTeamTexture();
-      return this.p.nebulaTexture = this.randomTeamTexture('nebula');
+      this.p.nebulaTexture = this.randomTeamTexture('nebula');
+      return this.teamResource.ignoreCollisionsWith('Ship');
     },
     draw: function(ctx) {
       this.drawNebula(ctx);
@@ -20733,12 +20747,17 @@ Quintus.UI = function(Q) {
       return this.absorber.reset();
     },
     onAbsorbed: function(entity) {
-      return this.stage.insert(new Q.ShieldFlare({
+      this.stage.insert(new Q.ShieldFlare({
         x: this.p.x,
         y: this.p.y,
         color: entity.teamResource.val().color(0.8),
         radius: (this.radius() + 20) * this.p.scale
       }));
+      if (this.absorber.absorbedPerc() < 1) {
+        return this.teamResource.allowCollisionsWith('Ship');
+      } else {
+        return this.teamResource.ignoreCollisionsWith('Ship');
+      }
     }
   });
 
@@ -21204,7 +21223,10 @@ Quintus.UI = function(Q) {
     createWith: function(p) {
       return {
         on: function(stage) {
-          return stage.insert(new Q.ShipYard(p));
+          var shipYard;
+          shipYard = new Q.ShipYard(p);
+          stage.insert(shipYard);
+          return shipYard;
         }
       };
     }
@@ -21446,7 +21468,6 @@ Quintus.UI = function(Q) {
             x: (xDistance * Q.axis(targetAngle).x) + x,
             y: (yDistance * Q.axis(targetAngle).y) + y
           };
-          console.log('center', coords);
           return _this.QStage.viewport.centerOn(coords.x, coords.y);
         };
       })(this);
@@ -21509,10 +21530,6 @@ Quintus.UI = function(Q) {
   StageDebug = (function(superClass) {
     extend(StageDebug, superClass);
 
-    function StageDebug() {
-      return StageDebug.__super__.constructor.apply(this, arguments);
-    }
-
     StageDebug.prototype.viewport = {
       coords: {
         x: 500,
@@ -21524,7 +21541,7 @@ Quintus.UI = function(Q) {
       {
         x: 500,
         y: 200,
-        startingShipCount: 0,
+        startingShipCount: 250,
         team: Team.BLUE,
         isBuilding: false
       }, {
@@ -21541,6 +21558,11 @@ Quintus.UI = function(Q) {
         strategy: AggressiveTeam
       }
     };
+
+    function StageDebug(QStage) {
+      this.QStage = QStage;
+      StageDebug.__super__.constructor.apply(this, arguments);
+    }
 
     return StageDebug;
 
