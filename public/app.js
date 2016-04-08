@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-03-28
+/*! bauralux - v1.0.0 - 2016-04-08
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -19703,7 +19703,7 @@ Quintus.UI = function(Q) {
   })(Q.Evented);
 
   Game = (function() {
-    Game.assets = ["star.png", "ship.png", "ship3.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/red/nebula_0.png", "planets/green/nebula_0.png", "planets/blue/nebula_0.png", "planets/red/nebula_1.png", "planets/green/nebula_1.png", "planets/blue/nebula_1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_yard/blue.png", "ship_yard/red.png", "ship_yard/green.png", "ship_explosion.mp3"];
+    Game.assets = ["ship.png", "shieldFlare.png", "planets/nebula/blue.png", "planets/red/0.png", "planets/red/1.png", "planets/green/0.png", "planets/green/1.png", "planets/blue/0.png", "planets/blue/1.png", "planets/none/0.png", "planets/none/1.png", "planets/red/nebula_0.png", "planets/green/nebula_0.png", "planets/blue/nebula_0.png", "planets/red/nebula_1.png", "planets/green/nebula_1.png", "planets/blue/nebula_1.png", "planets/planet0.png", "planets/planet1.png", "planets/planet_sheet_0.png", "planets/planet_sheet_0.json", "ship_yard/blue.png", "ship_yard/red.png", "ship_yard/green.png", "ship_explosion.mp3"];
 
     Game.start = function() {
       if (this.started == null) {
@@ -21541,7 +21541,7 @@ Quintus.UI = function(Q) {
       {
         x: 500,
         y: 200,
-        startingShipCount: 250,
+        startingShipCount: 0,
         team: Team.BLUE,
         isBuilding: false
       }, {
@@ -21560,8 +21560,21 @@ Quintus.UI = function(Q) {
     };
 
     function StageDebug(QStage) {
+      var props, yard;
       this.QStage = QStage;
       StageDebug.__super__.constructor.apply(this, arguments);
+      props = {
+        x: 500,
+        y: 300,
+        team: Team.BLUE,
+        isBuilding: true
+      };
+      yard = Q.ShipYard.createWith(props).on(this.QStage);
+      yard.absorber.absorbed.push({
+        sprite: null,
+        team: Team.BLUE,
+        val: 50
+      });
     }
 
     return StageDebug;
@@ -21773,10 +21786,41 @@ Quintus.UI = function(Q) {
 
     LevelSelect.register();
 
+    LevelSelect.prototype.addBackground = function() {
+      var bottomY, center, k, leftX, ref, rightX, topY;
+      center = Q.center();
+      leftX = center.x / 2;
+      rightX = center.x + (center.x / 2);
+      topY = center.y / 2;
+      bottomY = center.y + topY;
+      this.QStage.insert(new Q.Background);
+      for (k = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? k <= ref : k >= ref; 1 <= ref ? k++ : k--) {
+        this.QStage.insert(new Q.Star);
+      }
+      this.QStage.insert(new Q.Planet({
+        x: leftX,
+        y: topY,
+        scale: 1,
+        team: Team.GREEN
+      }));
+      this.QStage.insert(new Q.Planet({
+        x: rightX,
+        y: center.y,
+        scale: 1.25,
+        team: Team.RED
+      }));
+      return this.QStage.insert(new Q.Planet({
+        x: center.x - center.x / 4,
+        y: bottomY,
+        scale: 0.5,
+        team: Team.BLUE
+      }));
+    };
+
     LevelSelect.prototype.addUI = function() {
       var button, label;
       this.container = this.QStage.insert(new Q.UI.Container({
-        fill: "rgba(0,0,0,0.5)"
+        fill: "rgba(255,255,255,0.15)"
       }));
       label = new Q.UI.Text({
         x: 0,
@@ -21807,7 +21851,7 @@ Quintus.UI = function(Q) {
           return _this.container.insert(button);
         };
       })(this));
-      this.container.fit();
+      this.container.fit(40, 180);
       return this.placeInCenter(this.container);
     };
 

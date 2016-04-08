@@ -1,10 +1,6 @@
 class Game
   @assets = [
-    # "sprites.json"
-    # "sprites.png"
-    "star.png"
     "ship.png"
-    "ship3.png"
     "shieldFlare.png"
 
     "planets/nebula/blue.png"
