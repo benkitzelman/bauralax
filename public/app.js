@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-04-08
+/*! bauralux - v1.0.0 - 2016-04-14
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -18944,7 +18944,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, LevelSelect, MAX_HIT_POINTS, Menu, Path, Resources, Scene, ShipGroup, Stage, StageDebug, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, LevelSelect, MAX_HIT_POINTS, Menu, Path, Resources, Scene, ShipGroup, Stage, StageDebug, StageFour, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
@@ -19730,7 +19730,7 @@ Quintus.UI = function(Q) {
     }
 
     Game.prototype.stages = function() {
-      return [StageOne, StageTwo, StageThree, StageDebug];
+      return [StageOne, StageTwo, StageThree, StageFour, StageDebug];
     };
 
     Game.prototype.isLastStage = function() {
@@ -21753,6 +21753,62 @@ Quintus.UI = function(Q) {
 
   })(Stage);
 
+  StageFour = (function(superClass) {
+    extend(StageFour, superClass);
+
+    function StageFour() {
+      return StageFour.__super__.constructor.apply(this, arguments);
+    }
+
+    StageFour.prototype.viewport = {
+      coords: {
+        x: 600,
+        y: 700
+      },
+      scale: 1
+    };
+
+    StageFour.prototype.planets = [
+      {
+        x: 600,
+        y: 100,
+        startingShipCount: 50,
+        team: Team.RED
+      }, {
+        x: 600,
+        y: 400,
+        startingShipCount: 50,
+        team: Team.RED
+      }, {
+        x: 600,
+        y: 700,
+        startingShipCount: 50,
+        team: Team.GREEN
+      }, {
+        x: 600,
+        y: 1000,
+        startingShipCount: 50,
+        team: Team.BLUE
+      }, {
+        x: 600,
+        y: 1300,
+        startingShipCount: 50
+      }
+    ];
+
+    StageFour.prototype.enemyStrategem = {
+      RED: {
+        strategy: AggressiveTeam
+      },
+      BLUE: {
+        strategy: AggressiveTeam
+      }
+    };
+
+    return StageFour;
+
+  })(Stage);
+
   Menu = (function(superClass) {
     extend(Menu, superClass);
 
@@ -21818,41 +21874,42 @@ Quintus.UI = function(Q) {
     };
 
     LevelSelect.prototype.addUI = function() {
-      var button, label;
+      var BUTTON_COLOR, BUTTON_FONT, label;
+      BUTTON_COLOR = "rgba(255,255,255, 0.8)";
+      BUTTON_FONT = "400 20px Neuro";
       this.container = this.QStage.insert(new Q.UI.Container({
         fill: "rgba(255,255,255,0.15)"
       }));
       label = new Q.UI.Text({
         x: 0,
         y: 0,
-        color: "#CCCCCC",
-        label: "Bauralax"
+        color: BUTTON_COLOR,
+        label: ">GALACTIC SHIFT<",
+        size: 50,
+        family: 'Android'
       });
-      button = new Q.UI.Button({
-        x: 0,
-        y: 50,
-        fill: "#CCCCCC",
-        label: "Level 1"
-      });
-      button.on("click", this, 'onTryAgain');
-      this.container.insert(label);
+      this.QStage.insert(label);
       _.each(Game.instance.stages(), (function(_this) {
         return function(stage, i) {
-          var handler, y;
+          var button, handler, name, y;
           y = (i * 50) + 50;
+          name = stage.name.replace(/stage/i, '');
           button = new Q.UI.Button({
             x: 0,
             y: y,
-            fill: "#CCCCCC",
-            label: stage.name
+            fontColor: BUTTON_COLOR,
+            label: name,
+            font: BUTTON_FONT
           });
           handler = _this.onLoadStage.bind(_this, stage);
           button.on("click", handler);
           return _this.container.insert(button);
         };
       })(this));
-      this.container.fit(40, 180);
-      return this.placeInCenter(this.container);
+      this.container.fit(20, 100);
+      this.placeInCenter(this.container);
+      label.p.x = Q.center().x;
+      return label.p.y = this.container.p.y - label.p.h / 2;
     };
 
     LevelSelect.prototype.onLoadStage = function(stage) {

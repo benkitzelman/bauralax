@@ -1,0 +1,29 @@
+@font-face {
+  font-family: 'Stone';
+  src: url("../fonts/stone.ttf") format('truetype');
+}
+@font-face {
+  font-family: 'Android';
+  src: url("../fonts/android.ttf") format('truetype');
+}
+@font-face {
+  font-family: 'Neuro';
+  src: url("../fonts/neuropol.ttf") format('truetype');
+}
+
+#loading {
+  margin: 0 auto;
+}
+
+#loading_container {
+  width: 100%;
+}
+
+#loading_progress {
+  width: 0;
+  background-color: black;
+  position: absolute;
+  height: 100%;
+  top: 0;
+  left: 0;
+}

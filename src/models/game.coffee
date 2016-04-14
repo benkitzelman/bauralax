@@ -64,6 +64,7 @@ class Game
       StageOne
       StageTwo
       StageThree
+      StageFour
       StageDebug
     ]
 
