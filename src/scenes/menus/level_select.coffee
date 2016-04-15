@@ -17,27 +17,31 @@ class LevelSelect extends Menu
     @QStage.insert(new Q.Planet(x: center.x - center.x / 4, y: bottomY, scale: 0.5, team: Team.BLUE))
 
   addUI: ->
-    BUTTON_COLOR = "rgba(255,255,255, 0.8)"
-    BUTTON_FONT  = "400 20px Neuro"
-
     @container = @QStage.insert( new Q.UI.Container
-      fill: "rgba(255,255,255,0.15)"
+      fill: Q.colorString([255,255,255,0.15])
     )
 
-    label  = new Q.UI.Text( x: 0, y: 0, color: BUTTON_COLOR, label: ">GALACTIC SHIFT<", size: 50, family: 'Android' )
+    label  = new Q.UI.Text( x: 0, y: 0, color: @style.heading.color, label: ">GALACTIC SHIFT<", size: @style.heading.size, family: @style.heading.font )
     @QStage.insert label
 
     _.each Game.instance.stages(), (stage, i) =>
-      y = (i * 50) + 50
+      padding = Q.percentToPx(0.03, 'width')
+      y       = (i * (@style.button.size + padding)) + (padding * 2)
 
       name    = stage.name.replace(/stage/i, '')
-      button  = new Q.UI.Button( x: 0, y: y, fontColor: BUTTON_COLOR, label: name, font: BUTTON_FONT )
+      button  = new Q.UI.Button
+        x         : 0
+        y         : y
+        fontColor : @style.button.color
+        label     : name
+        font      : "400 #{ @style.button.size }px #{ @style.button.font }"
+
       handler = @onLoadStage.bind @, stage
 
       button.on "click", handler
       @container.insert button
 
-    @container.fit 20, 100
+    @container.fit Q.percentToPx(0.01, 'height'), Q.percentToPx(0.2, 'width')
 
     @placeInCenter @container
     label.p.x = Q.center().x

@@ -1,5 +1,8 @@
 Quintus.Util = (Q) ->
 
+  Q.percentToPx = (perc, widthOrHeight = 'width') ->
+    Math.round( Q[ widthOrHeight ] * perc )
+
   Q.center = ->
     { x: Q.width / 2, y: Q.height / 2 }
 
@@ -39,4 +42,4 @@ Quintus.Util = (Q) ->
 
   Q.colorString = (rgba) ->
     alpha = rgba.pop()
-    "rgba(#{ rgba.join(',') }, #{alpha})"
+    "rgba(#{ rgba.join(',') },#{alpha})"

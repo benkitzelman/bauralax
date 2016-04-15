@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-04-14
+/*! bauralux - v1.0.0 - 2016-04-15
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -19208,6 +19208,12 @@ Quintus.UI = function(Q) {
   };
 
   Quintus.Util = function(Q) {
+    Q.percentToPx = function(perc, widthOrHeight) {
+      if (widthOrHeight == null) {
+        widthOrHeight = 'width';
+      }
+      return Math.round(Q[widthOrHeight] * perc);
+    };
     Q.center = function() {
       return {
         x: Q.width / 2,
@@ -19262,7 +19268,7 @@ Quintus.UI = function(Q) {
     return Q.colorString = function(rgba) {
       var alpha;
       alpha = rgba.pop();
-      return "rgba(" + (rgba.join(',')) + ", " + alpha + ")";
+      return "rgba(" + (rgba.join(',')) + "," + alpha + ")";
     };
   };
 
@@ -19271,7 +19277,7 @@ Quintus.UI = function(Q) {
     imagePath: "./assets/images/",
     audioPath: './assets/audio/',
     dataPath: './assets/images/'
-  }).include("Sprites, Anim, Math, Util, Scenes, Input, HammerTouch, 2D, UI, Audio, TeamCollisions").setup({
+  }).include("Sprites, Anim, Math, Util, Scenes, Input, HammerTouch, 2D, UI, Audio, TeamCollisions").setup('game-canvas', {
     maximize: true,
     scaleToFit: true
   }).touch().enableSound();
@@ -21814,6 +21820,19 @@ Quintus.UI = function(Q) {
 
     Menu.type = 'menu';
 
+    Menu.prototype.style = {
+      heading: {
+        color: Q.colorString([255, 255, 255, 0.8]),
+        size: Q.percentToPx(0.05, 'width'),
+        font: "Android"
+      },
+      button: {
+        color: Q.colorString([255, 255, 255, 0.8]),
+        size: Q.percentToPx(0.02, 'width'),
+        font: "Neuro"
+      }
+    };
+
     function Menu(QStage) {
       this.QStage = QStage;
       if (typeof this.addBackground === "function") {
@@ -21874,39 +21893,38 @@ Quintus.UI = function(Q) {
     };
 
     LevelSelect.prototype.addUI = function() {
-      var BUTTON_COLOR, BUTTON_FONT, label;
-      BUTTON_COLOR = "rgba(255,255,255, 0.8)";
-      BUTTON_FONT = "400 20px Neuro";
+      var label;
       this.container = this.QStage.insert(new Q.UI.Container({
-        fill: "rgba(255,255,255,0.15)"
+        fill: Q.colorString([255, 255, 255, 0.15])
       }));
       label = new Q.UI.Text({
         x: 0,
         y: 0,
-        color: BUTTON_COLOR,
+        color: this.style.heading.color,
         label: ">GALACTIC SHIFT<",
-        size: 50,
-        family: 'Android'
+        size: this.style.heading.size,
+        family: this.style.heading.font
       });
       this.QStage.insert(label);
       _.each(Game.instance.stages(), (function(_this) {
         return function(stage, i) {
-          var button, handler, name, y;
-          y = (i * 50) + 50;
+          var button, handler, name, padding, y;
+          padding = Q.percentToPx(0.03, 'width');
+          y = (i * (_this.style.button.size + padding)) + (padding * 2);
           name = stage.name.replace(/stage/i, '');
           button = new Q.UI.Button({
             x: 0,
             y: y,
-            fontColor: BUTTON_COLOR,
+            fontColor: _this.style.button.color,
             label: name,
-            font: BUTTON_FONT
+            font: "400 " + _this.style.button.size + "px " + _this.style.button.font
           });
           handler = _this.onLoadStage.bind(_this, stage);
           button.on("click", handler);
           return _this.container.insert(button);
         };
       })(this));
-      this.container.fit(20, 100);
+      this.container.fit(Q.percentToPx(0.01, 'height'), Q.percentToPx(0.2, 'width'));
       this.placeInCenter(this.container);
       label.p.x = Q.center().x;
       return label.p.y = this.container.p.y - label.p.h / 2;
