@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-04-15
+/*! bauralux - v1.0.0 - 2016-04-16
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -18944,7 +18944,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, LevelSelect, MAX_HIT_POINTS, Menu, Path, Resources, Scene, ShipGroup, Stage, StageDebug, StageFour, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, LevelSelect, MAX_HIT_POINTS, Menu, Path, ProgressBar, Resources, Scene, ShipGroup, Stage, StageDebug, StageFour, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
@@ -19781,15 +19781,23 @@ Quintus.UI = function(Q) {
     };
 
     Game.prototype.loadAssets = function() {
-      _.invoke(this.stages(), 'register');
-      return this.Q.load(Game.assets.join(', '), (function(_this) {
+      var onLoaded, progress;
+      onLoaded = (function(_this) {
         return function() {
           _this.Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json");
           _this.configureAnimations();
           _this.mainMenu();
           return Game.started.resolveWith(_this);
         };
+      })(this);
+      _.invoke(this.stages(), 'register');
+      progress = ProgressBar.instance();
+      progress.assetsLoading.done((function(_this) {
+        return function() {
+          return $('#game').removeClass('hide');
+        };
       })(this));
+      return this.Q.load(Game.assets.join(', '), onLoaded, progress);
     };
 
     Game.prototype.configureAnimations = function() {
@@ -19891,6 +19899,36 @@ Quintus.UI = function(Q) {
     };
 
     return Path;
+
+  })();
+
+  ProgressBar = (function() {
+    ProgressBar.instance = function() {
+      if (this._bar == null) {
+        this._bar = new ProgressBar;
+      }
+      return this._bar;
+    };
+
+    function ProgressBar() {
+      this.progressCallback = bind(this.progressCallback, this);
+      this.assetsLoading = new $.Deferred;
+      this.container = $('#loading');
+      this.el = $('#loading_progress');
+    }
+
+    ProgressBar.prototype.progressCallback = function(loaded, total) {
+      var perc;
+      perc = Math.floor(loaded / total * 100);
+      this.el.width(perc + '%');
+      if (!(perc >= 100)) {
+        return this.assetsLoading;
+      }
+      this.container.addClass('hide');
+      return this.assetsLoading.resolve();
+    };
+
+    return ProgressBar;
 
   })();
 

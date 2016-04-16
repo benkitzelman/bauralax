@@ -92,13 +92,21 @@ class Game
     return @currentStage().transitionTo( StageLostGame ) if hasLost()
 
   loadAssets: ->
-    _.invoke @stages(), 'register'
-
-    @Q.load Game.assets.join(', '), =>
+    onLoaded = =>
       @Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json")
       @configureAnimations()
       @mainMenu()
       Game.started.resolveWith this
+
+    #--
+
+    _.invoke @stages(), 'register'
+
+    progress = ProgressBar.instance()
+    progress.assetsLoading.done =>
+      $( '#game' ).removeClass 'hide'
+
+    @Q.load Game.assets.join(', '), onLoaded, progress
 
   configureAnimations: ->
     @Q.animations 'planet0',

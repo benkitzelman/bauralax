@@ -11,6 +11,19 @@
   src: url("../fonts/neuropol.ttf") format('truetype');
 }
 
+.fadeable {
+  -webkit-transition: opacity 2s;
+  transition : opacity 2s;
+}
+
+.hide {
+  opacity: 0;
+}
+
+body {
+  background-color: black;
+}
+
 #loading {
   margin: 0 auto;
 }
@@ -21,11 +34,12 @@
 
 #loading_progress {
   width: 0;
-  background-color: black;
+  background-color: red;
   position: absolute;
-  height: 100%;
+  height: 5px;
   top: 0;
   left: 0;
+  z-index: 100;
 }
 
 #level-hud {
