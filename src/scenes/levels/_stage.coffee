@@ -44,6 +44,7 @@ class Stage extends Scene
   addBackground: =>
     @QStage.insert(new Q.Background)
     @QStage.insert(new Q.Star) for [1..(Q.width * Q.height / 10000)]
+    Hud.instance().show()
 
   addPlanets: =>
     for p in @planets
@@ -136,17 +137,17 @@ class Stage extends Scene
     _.max [ 0.15, Math.abs( velocity ) ]
 
   onZoomOut: (e) =>
-    @viewportTarget ?= 
+    @viewportTarget ?=
       scale: _.max [ 0.2, @QStage.viewport.scale - @zoomIncrementFor( e.velocity ) ]
       coords: e.initialCenter
 
   onZoomIn: (e) =>
-    @viewportTarget ?= 
+    @viewportTarget ?=
       scale: _.min [ 3, @QStage.viewport.scale + @zoomIncrementFor( e.velocity ) ]
       coords: e.initialCenter
 
   onPress: (e) =>
-    props = 
+    props =
       x      : e.p.x
       y      : e.p.y
       team   : Game.instance.playerTeam

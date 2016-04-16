@@ -14,6 +14,7 @@ class Menu extends Scene
 
 
   constructor: (@QStage) ->
+    Hud.instance().hide()
     @addBackground?()
     @addUI?()
 

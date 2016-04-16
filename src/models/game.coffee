@@ -98,15 +98,17 @@ class Game
       @mainMenu()
       Game.started.resolveWith this
 
+    showGameCanvas = ->
+      _.delay (-> $( '#game' ).removeClass 'hide'), 1000
     #--
 
     _.invoke @stages(), 'register'
 
-    progress = ProgressBar.instance()
-    progress.assetsLoading.done =>
-      $( '#game' ).removeClass 'hide'
+    allAssets = Game.assets.join ', '
+    progress  = ProgressBar.instance()
+    progress.whenAssetsLoad.done showGameCanvas
 
-    @Q.load Game.assets.join(', '), onLoaded, progress
+    @Q.load allAssets, onLoaded, progressCallback: progress.update
 
   configureAnimations: ->
     @Q.animations 'planet0',

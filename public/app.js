@@ -18944,7 +18944,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, LevelSelect, MAX_HIT_POINTS, Menu, Path, ProgressBar, Resources, Scene, ShipGroup, Stage, StageDebug, StageFour, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, HtmlComponent, Hud, LevelSelect, MAX_HIT_POINTS, Menu, Path, ProgressBar, Resources, Scene, ShipGroup, Stage, StageDebug, StageFour, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
@@ -19286,6 +19286,57 @@ Quintus.UI = function(Q) {
     return Game.start();
   });
 
+  HtmlComponent = (function() {
+    HtmlComponent.prototype.elements = {};
+
+    HtmlComponent.prototype.events = {};
+
+    function HtmlComponent() {
+      this.refreshElements();
+      this.bindEvents();
+    }
+
+    HtmlComponent.prototype.refreshElements = function() {
+      var k, ref, results, v;
+      ref = this.elements || {};
+      results = [];
+      for (k in ref) {
+        v = ref[k];
+        results.push(this[v] = $(k));
+      }
+      return results;
+    };
+
+    HtmlComponent.prototype.bindEvents = function() {
+      var bits, eventAndSelector, eventName, fnName, ref, results, selector;
+      ref = this.events || {};
+      results = [];
+      for (eventAndSelector in ref) {
+        fnName = ref[eventAndSelector];
+        bits = eventAndSelector.split(' ');
+        eventName = bits.shift();
+        selector = bits.join(' ');
+        results.push($(selector).off(eventName).on(eventName, this[fnName].bind(this)));
+      }
+      return results;
+    };
+
+    HtmlComponent.prototype.isHidden = function() {
+      return this.el.hasClass('hide');
+    };
+
+    HtmlComponent.prototype.show = function() {
+      return this.el.removeClass('hide');
+    };
+
+    HtmlComponent.prototype.hide = function() {
+      return this.el.addClass('hide');
+    };
+
+    return HtmlComponent;
+
+  })();
+
   Q.component('absorbable', {
     absorb: function(absorber) {
       var base;
@@ -19443,6 +19494,108 @@ Quintus.UI = function(Q) {
       }
     }
   });
+
+  Hud = (function(superClass) {
+    extend(Hud, superClass);
+
+    Hud.instance = function() {
+      if (this._bar == null) {
+        this._bar = new Hud;
+      }
+      return this._bar;
+    };
+
+    Hud.prototype.elements = {
+      '#level-hud': 'el',
+      '#level-hud .pause': 'pauseBtn',
+      '#level-hud .play': 'playBtn'
+    };
+
+    Hud.prototype.events = {
+      'click #level-hud .replay': 'onReplayClicked',
+      'click #level-hud .pause': 'onPauseClicked',
+      'click #level-hud .play': 'onPlayClicked',
+      'click #level-hud .main-menu': 'onMainMenuClicked'
+    };
+
+    function Hud() {
+      Hud.__super__.constructor.apply(this, arguments);
+      this.playBtn.hide();
+    }
+
+    Hud.prototype.onReplayClicked = function() {
+      var args;
+      args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+      if (this.isHidden()) {
+        return;
+      }
+      return Game.instance.replayLastStage();
+    };
+
+    Hud.prototype.onPauseClicked = function() {
+      if (this.isHidden()) {
+        return;
+      }
+      this.playBtn.show();
+      this.pauseBtn.hide();
+      return Q.pauseGame();
+    };
+
+    Hud.prototype.onPlayClicked = function() {
+      if (this.isHidden()) {
+        return;
+      }
+      this.playBtn.hide();
+      this.pauseBtn.show();
+      return Q.unpauseGame();
+    };
+
+    Hud.prototype.onMainMenuClicked = function() {
+      if (this.isHidden()) {
+        return;
+      }
+      return Game.instance.mainMenu();
+    };
+
+    return Hud;
+
+  })(HtmlComponent);
+
+  ProgressBar = (function(superClass) {
+    extend(ProgressBar, superClass);
+
+    ProgressBar.instance = function() {
+      if (this._bar == null) {
+        this._bar = new ProgressBar;
+      }
+      return this._bar;
+    };
+
+    ProgressBar.prototype.elements = {
+      "#loading": 'container',
+      '#loading_progress': 'el'
+    };
+
+    function ProgressBar() {
+      this.update = bind(this.update, this);
+      ProgressBar.__super__.constructor.apply(this, arguments);
+      this.whenAssetsLoad = new $.Deferred;
+    }
+
+    ProgressBar.prototype.update = function(loaded, total) {
+      var perc;
+      perc = Math.floor(loaded / total * 100);
+      this.el.width(perc + '%');
+      if (!(perc >= 100)) {
+        return this.whenAssetsLoad;
+      }
+      this.container.addClass('hide');
+      return this.whenAssetsLoad.resolve();
+    };
+
+    return ProgressBar;
+
+  })(HtmlComponent);
 
   Q.component('selectionControls', {
     added: function() {
@@ -19781,7 +19934,7 @@ Quintus.UI = function(Q) {
     };
 
     Game.prototype.loadAssets = function() {
-      var onLoaded, progress;
+      var allAssets, onLoaded, progress, showGameCanvas;
       onLoaded = (function(_this) {
         return function() {
           _this.Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json");
@@ -19790,14 +19943,18 @@ Quintus.UI = function(Q) {
           return Game.started.resolveWith(_this);
         };
       })(this);
-      _.invoke(this.stages(), 'register');
-      progress = ProgressBar.instance();
-      progress.assetsLoading.done((function(_this) {
-        return function() {
+      showGameCanvas = function() {
+        return _.delay((function() {
           return $('#game').removeClass('hide');
-        };
-      })(this));
-      return this.Q.load(Game.assets.join(', '), onLoaded, progress);
+        }), 1000);
+      };
+      _.invoke(this.stages(), 'register');
+      allAssets = Game.assets.join(', ');
+      progress = ProgressBar.instance();
+      progress.whenAssetsLoad.done(showGameCanvas);
+      return this.Q.load(allAssets, onLoaded, {
+        progressCallback: progress.update
+      });
     };
 
     Game.prototype.configureAnimations = function() {
@@ -19899,36 +20056,6 @@ Quintus.UI = function(Q) {
     };
 
     return Path;
-
-  })();
-
-  ProgressBar = (function() {
-    ProgressBar.instance = function() {
-      if (this._bar == null) {
-        this._bar = new ProgressBar;
-      }
-      return this._bar;
-    };
-
-    function ProgressBar() {
-      this.progressCallback = bind(this.progressCallback, this);
-      this.assetsLoading = new $.Deferred;
-      this.container = $('#loading');
-      this.el = $('#loading_progress');
-    }
-
-    ProgressBar.prototype.progressCallback = function(loaded, total) {
-      var perc;
-      perc = Math.floor(loaded / total * 100);
-      this.el.width(perc + '%');
-      if (!(perc >= 100)) {
-        return this.assetsLoading;
-      }
-      this.container.addClass('hide');
-      return this.assetsLoading.resolve();
-    };
-
-    return ProgressBar;
 
   })();
 
@@ -21402,21 +21529,20 @@ Quintus.UI = function(Q) {
     };
 
     Stage.prototype.addBackground = function() {
-      var k, ref, results;
+      var m, ref;
       this.QStage.insert(new Q.Background);
-      results = [];
-      for (k = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? k <= ref : k >= ref; 1 <= ref ? k++ : k--) {
-        results.push(this.QStage.insert(new Q.Star));
+      for (m = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? m <= ref : m >= ref; 1 <= ref ? m++ : m--) {
+        this.QStage.insert(new Q.Star);
       }
-      return results;
+      return Hud.instance().show();
     };
 
     Stage.prototype.addPlanets = function() {
-      var k, len, p, ref, results;
+      var len, m, p, ref, results;
       ref = this.planets;
       results = [];
-      for (k = 0, len = ref.length; k < len; k++) {
-        p = ref[k];
+      for (m = 0, len = ref.length; m < len; m++) {
+        p = ref[m];
         results.push(this.QStage.insert(new Q.Planet(p)));
       }
       return results;
@@ -21873,6 +21999,7 @@ Quintus.UI = function(Q) {
 
     function Menu(QStage) {
       this.QStage = QStage;
+      Hud.instance().hide();
       if (typeof this.addBackground === "function") {
         this.addBackground();
       }
@@ -21900,14 +22027,14 @@ Quintus.UI = function(Q) {
     LevelSelect.register();
 
     LevelSelect.prototype.addBackground = function() {
-      var bottomY, center, k, leftX, ref, rightX, topY;
+      var bottomY, center, leftX, m, ref, rightX, topY;
       center = Q.center();
       leftX = center.x / 2;
       rightX = center.x + (center.x / 2);
       topY = center.y / 2;
       bottomY = center.y + topY;
       this.QStage.insert(new Q.Background);
-      for (k = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? k <= ref : k >= ref; 1 <= ref ? k++ : k--) {
+      for (m = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? m <= ref : m >= ref; 1 <= ref ? m++ : m--) {
         this.QStage.insert(new Q.Star);
       }
       this.QStage.insert(new Q.Planet({
