@@ -21984,7 +21984,8 @@ Quintus.UI = function(Q) {
         y: 550
       }, {
         x: 200,
-        y: 400
+        y: 400,
+        team: Team.RED
       }, {
         x: 800,
         y: 250
@@ -21993,7 +21994,8 @@ Quintus.UI = function(Q) {
         y: 550
       }, {
         x: 1000,
-        y: 400
+        y: 400,
+        team: Team.RED
       }
     ];
 

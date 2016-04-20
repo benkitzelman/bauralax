@@ -14,14 +14,14 @@ class StageThree extends Stage
     (x: 400, y: 550)
 
     # left
-    (x: 200, y: 400)
+    (x: 200, y: 400, team: Team.RED)
 
     # mid right
     (x: 800, y: 250)
     (x: 800, y: 550)
 
     #right
-    (x: 1000, y: 400)
+    (x: 1000, y: 400, team: Team.RED)
   ]
 
   enemyStrategem:
