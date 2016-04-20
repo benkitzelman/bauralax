@@ -19,23 +19,17 @@ class Hud extends HtmlComponent
     @playBtn.hide()
 
   onReplayClicked: (args...) ->
-    return if @isHidden()
     Game.instance.replayLastStage()
 
   onPauseClicked: ->
-    return if @isHidden()
-
     @playBtn.show()
     @pauseBtn.hide()
     Q.pauseGame()
 
   onPlayClicked: ->
-    return if @isHidden()
-
     @playBtn.hide()
     @pauseBtn.show()
     Q.unpauseGame()
 
   onMainMenuClicked: ->
-    return if @isHidden()
     Game.instance.mainMenu()

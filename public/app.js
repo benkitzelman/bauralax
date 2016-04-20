@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-04-16
+/*! bauralux - v1.0.0 - 2016-04-20
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -18944,7 +18944,7 @@ Quintus.UI = function(Q) {
 
 };
 (function() {
-  var AggressiveTeam, Collection, Game, HtmlComponent, Hud, LevelSelect, MAX_HIT_POINTS, Menu, Path, ProgressBar, Resources, Scene, ShipGroup, Stage, StageDebug, StageFour, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
+  var AggressiveTeam, Collection, Game, HtmlComponent, Hud, LevelSelect, LevelSelector, MAX_HIT_POINTS, Menu, Path, ProgressBar, Resources, Scene, ShipGroup, Stage, StageDebug, StageFour, StageLostGame, StageOne, StageThree, StageTwo, StageWonGame, Target, Team, TeamStrategy, TouchInput,
     bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
     hasProp = {}.hasOwnProperty,
@@ -19291,6 +19291,31 @@ Quintus.UI = function(Q) {
 
     HtmlComponent.prototype.events = {};
 
+    HtmlComponent.showFadeable = function(el) {
+      $(el).css({
+        display: 'block'
+      });
+      return $(el).removeClass('hide');
+    };
+
+    HtmlComponent.hideFadeable = function(el) {
+      $(el).addClass('hide');
+      return _.delay((function(_this) {
+        return function() {
+          if (!$(el).hasClass('hide')) {
+            return;
+          }
+          return $(el).css({
+            display: 'none'
+          });
+        };
+      })(this), 2000);
+    };
+
+    HtmlComponent.isFadeableHidden = function(el) {
+      return $(el).hasClass('hide');
+    };
+
     function HtmlComponent() {
       this.refreshElements();
       this.bindEvents();
@@ -19322,15 +19347,15 @@ Quintus.UI = function(Q) {
     };
 
     HtmlComponent.prototype.isHidden = function() {
-      return this.el.hasClass('hide');
+      return HtmlComponent.isFadeableHidden(this.el);
     };
 
     HtmlComponent.prototype.show = function() {
-      return this.el.removeClass('hide');
+      return HtmlComponent.showFadeable(this.el);
     };
 
     HtmlComponent.prototype.hide = function() {
-      return this.el.addClass('hide');
+      return HtmlComponent.hideFadeable(this.el);
     };
 
     return HtmlComponent;
@@ -19526,38 +19551,90 @@ Quintus.UI = function(Q) {
     Hud.prototype.onReplayClicked = function() {
       var args;
       args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-      if (this.isHidden()) {
-        return;
-      }
       return Game.instance.replayLastStage();
     };
 
     Hud.prototype.onPauseClicked = function() {
-      if (this.isHidden()) {
-        return;
-      }
       this.playBtn.show();
       this.pauseBtn.hide();
       return Q.pauseGame();
     };
 
     Hud.prototype.onPlayClicked = function() {
-      if (this.isHidden()) {
-        return;
-      }
       this.playBtn.hide();
       this.pauseBtn.show();
       return Q.unpauseGame();
     };
 
     Hud.prototype.onMainMenuClicked = function() {
-      if (this.isHidden()) {
-        return;
-      }
       return Game.instance.mainMenu();
     };
 
     return Hud;
+
+  })(HtmlComponent);
+
+  LevelSelector = (function(superClass) {
+    extend(LevelSelector, superClass);
+
+    function LevelSelector() {
+      return LevelSelector.__super__.constructor.apply(this, arguments);
+    }
+
+    LevelSelector.prototype.elements = {
+      '#level-selector': 'el',
+      '#level-selector .levels': 'btnContainer',
+      '#level-selector .play-btn': 'playBtn',
+      '#level-selector .levels .btn': 'levelBtns'
+    };
+
+    LevelSelector.prototype.events = {
+      'click #level-selector .level-btn': 'onLevelSelected',
+      'click #level-selector .play-btn': 'onPlaySelected'
+    };
+
+    LevelSelector.prototype.render = function() {
+      var len, level, m, ref, ref1;
+      this.btnContainer.html('');
+      ref1 = ((ref = Game.instance) != null ? ref.stages() : void 0) || [];
+      for (m = 0, len = ref1.length; m < len; m++) {
+        level = ref1[m];
+        this.renderBtnFor(level);
+      }
+      this.bindEvents();
+      this.refreshElements();
+      return this;
+    };
+
+    LevelSelector.prototype.renderBtnFor = function(level) {
+      var readableName;
+      readableName = level.name.replace(/stage/i, '');
+      return this.btnContainer.append("<div class=\"level-btn btn\" data-name=\"" + level.name + "\">" + readableName + "</div>");
+    };
+
+    LevelSelector.prototype.onLevelSelected = function(e) {
+      var el, stage;
+      this.levelBtns.removeClass('selected');
+      el = $(e.currentTarget);
+      el.addClass('selected');
+      stage = _.find(Game.instance.stages(), {
+        name: el.data('name')
+      });
+      return Game.instance.loadStage(stage).done((function(_this) {
+        return function() {
+          Q.pauseGame();
+          return HtmlComponent.showFadeable(_this.playBtn);
+        };
+      })(this));
+    };
+
+    LevelSelector.prototype.onPlaySelected = function() {
+      HtmlComponent.hideFadeable(this.playBtn);
+      this.hide();
+      return Q.unpauseGame();
+    };
+
+    return LevelSelector;
 
   })(HtmlComponent);
 
@@ -21456,8 +21533,16 @@ Quintus.UI = function(Q) {
     };
 
     Scene.load = function() {
+      var def;
+      def = new $.Deferred;
       Q.clearStages();
-      return Q.stageScene(this.name);
+      Q.stageScene(this.name);
+      _.defer(((function(_this) {
+        return function() {
+          return def.resolve(_this);
+        };
+      })(this)));
+      return def;
     };
 
     return Scene;
@@ -21525,16 +21610,18 @@ Quintus.UI = function(Q) {
       Q.hammerTouchInput.on('zoom-in', this.onZoomIn);
       ref1 = ((ref = this.viewport) != null ? ref.coords : void 0) || Q.center(), x = ref1.x, y = ref1.y;
       this.QStage.viewport.centerOn(x, y);
-      return this.QStage.viewport.scale = ((ref2 = this.viewport) != null ? ref2.scale : void 0) || this.autoScale();
+      this.QStage.viewport.scale = ((ref2 = this.viewport) != null ? ref2.scale : void 0) || this.autoScale();
+      return Hud.instance().show();
     };
 
     Stage.prototype.addBackground = function() {
-      var m, ref;
+      var m, ref, results;
       this.QStage.insert(new Q.Background);
+      results = [];
       for (m = 1, ref = Q.width * Q.height / 10000; 1 <= ref ? m <= ref : m >= ref; 1 <= ref ? m++ : m--) {
-        this.QStage.insert(new Q.Star);
+        results.push(this.QStage.insert(new Q.Star));
       }
-      return Hud.instance().show();
+      return results;
     };
 
     Stage.prototype.addPlanets = function() {
@@ -22058,45 +22145,10 @@ Quintus.UI = function(Q) {
     };
 
     LevelSelect.prototype.addUI = function() {
-      var label;
-      this.container = this.QStage.insert(new Q.UI.Container({
-        fill: Q.colorString([255, 255, 255, 0.15])
-      }));
-      label = new Q.UI.Text({
-        x: 0,
-        y: 0,
-        color: this.style.heading.color,
-        label: ">GALACTIC SHIFT<",
-        size: this.style.heading.size,
-        family: this.style.heading.font
-      });
-      this.QStage.insert(label);
-      _.each(Game.instance.stages(), (function(_this) {
-        return function(stage, i) {
-          var button, handler, name, padding, y;
-          padding = Q.percentToPx(0.03, 'width');
-          y = (i * (_this.style.button.size + padding)) + (padding * 2);
-          name = stage.name.replace(/stage/i, '');
-          button = new Q.UI.Button({
-            x: 0,
-            y: y,
-            fontColor: _this.style.button.color,
-            label: name,
-            font: "400 " + _this.style.button.size + "px " + _this.style.button.font
-          });
-          handler = _this.onLoadStage.bind(_this, stage);
-          button.on("click", handler);
-          return _this.container.insert(button);
-        };
-      })(this));
-      this.container.fit(Q.percentToPx(0.01, 'height'), Q.percentToPx(0.2, 'width'));
-      this.placeInCenter(this.container);
-      label.p.x = Q.center().x;
-      return label.p.y = this.container.p.y - label.p.h / 2;
-    };
-
-    LevelSelect.prototype.onLoadStage = function(stage) {
-      return Game.instance.loadStage(stage);
+      if (this.levelSelector == null) {
+        this.levelSelector = (new LevelSelector()).render();
+      }
+      return this.levelSelector.show();
     };
 
     return LevelSelect;

@@ -36,7 +36,7 @@ class Stage extends Scene
     { x, y } = @viewport?.coords or Q.center()
     @QStage.viewport.centerOn x, y
     @QStage.viewport.scale = @viewport?.scale or @autoScale()
-
+    Hud.instance().show()
     # @QStage.collide = (obj, options) ->
     #   debugger
       #apply the collision mask so friendly ships dont collide
@@ -44,7 +44,6 @@ class Stage extends Scene
   addBackground: =>
     @QStage.insert(new Q.Background)
     @QStage.insert(new Q.Star) for [1..(Q.width * Q.height / 10000)]
-    Hud.instance().show()
 
   addPlanets: =>
     for p in @planets

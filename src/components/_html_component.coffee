@@ -2,6 +2,20 @@ class HtmlComponent
   elements : {}
   events   : {}
 
+  @showFadeable: (el) ->
+    $(el).css(display: 'block')
+    $(el).removeClass 'hide'
+
+  @hideFadeable: (el) ->
+    $(el).addClass 'hide'
+    _.delay =>
+      return unless $(el).hasClass 'hide'
+      $(el).css(display: 'none')
+    , 2000
+
+  @isFadeableHidden: (el)->
+    $(el).hasClass 'hide'
+
   constructor: ->
     @refreshElements()
     @bindEvents()
@@ -17,10 +31,10 @@ class HtmlComponent
       $(selector).off(eventName).on( eventName, @[fnName].bind(@) )
 
   isHidden: ->
-    @el.hasClass 'hide'
+    HtmlComponent.isFadeableHidden @el
 
   show: ->
-    @el.removeClass 'hide'
+    HtmlComponent.showFadeable @el
 
   hide: ->
-    @el.addClass 'hide'
+    HtmlComponent.hideFadeable @el
