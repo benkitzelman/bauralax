@@ -101,10 +101,10 @@ class Stage extends Scene
       vX = @QStage.viewport.x
       vY = @QStage.viewport.y
 
-      maxStepDistance = 40 * dt
+      maxStepDistance = 10
       targetAngle     = Q.angle vX, vY, x, y
       tripDistance    = Q.distance vX, vY, x, y
-      stepDistance    = _.min [ tripDistance, maxStepDistance ] # step hypotenuse
+      stepDistance    = _.min [ dt, tripDistance, maxStepDistance ] # step hypotenuse
 
       xDistance       = Q.offsetX targetAngle, stepDistance
       yDistance       = Q.offsetY targetAngle, stepDistance
@@ -121,8 +121,9 @@ class Stage extends Scene
       return unless scale = @viewportTarget?.scale
       return if scale is @QStage.viewport.scale
 
+      maxSpeed       = 0.1
       remainingScale = Math.abs( @QStage.viewport.scale - scale )
-      scaleStep      = _.min [ (dt * 40), remainingScale ]
+      scaleStep      = _.min [ dt, remainingScale, maxSpeed ]
 
       scaleStep *= -1 if @QStage.viewport.scale > scale
       @QStage.viewport.scale += scaleStep

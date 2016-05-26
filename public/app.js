@@ -21715,10 +21715,10 @@ Quintus.UI = function(Q) {
           }
           vX = _this.QStage.viewport.x;
           vY = _this.QStage.viewport.y;
-          maxStepDistance = 40 * dt;
+          maxStepDistance = 10;
           targetAngle = Q.angle(vX, vY, x, y);
           tripDistance = Q.distance(vX, vY, x, y);
-          stepDistance = _.min([tripDistance, maxStepDistance]);
+          stepDistance = _.min([dt, tripDistance, maxStepDistance]);
           xDistance = Q.offsetX(targetAngle, stepDistance);
           yDistance = Q.offsetY(targetAngle, stepDistance);
           coords = {
@@ -21730,15 +21730,16 @@ Quintus.UI = function(Q) {
       })(this);
       stepScale = (function(_this) {
         return function() {
-          var ref, remainingScale, scale, scaleStep;
+          var maxSpeed, ref, remainingScale, scale, scaleStep;
           if (!(scale = (ref = _this.viewportTarget) != null ? ref.scale : void 0)) {
             return;
           }
           if (scale === _this.QStage.viewport.scale) {
             return;
           }
+          maxSpeed = 0.1;
           remainingScale = Math.abs(_this.QStage.viewport.scale - scale);
-          scaleStep = _.min([dt * 40, remainingScale]);
+          scaleStep = _.min([dt, remainingScale, maxSpeed]);
           if (_this.QStage.viewport.scale > scale) {
             scaleStep *= -1;
           }
