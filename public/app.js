@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-04-20
+/*! bauralux - v1.0.0 - 2016-05-26
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/

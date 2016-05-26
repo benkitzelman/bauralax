@@ -22,7 +22,6 @@
     "grunt-http-server": "^1.13.0",
     "http-server": "~ 0.5.5",
     "lodash": "^3.10.1",
-    "quintus": "^0.2.0",
-    "spriter": "https://github.com/tristanstraub/spriter.git"
+    "quintus": "^0.2.0"
   }
 }

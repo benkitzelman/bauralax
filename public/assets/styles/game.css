@@ -88,14 +88,16 @@ body {
 }
 
 #level-selector .btn {
-  -webkit-transition: color 2s, text-shadow 2s;
-  transition : color 2s, text-shadow 2s;
-  text-shadow: 0 0 0 rgba(0,0,0,0.5);
+  -webkit-transition: color 1s, text-shadow 1s;
+  transition : color 1s, text-shadow 1s;
+  text-shadow: 2px 2px 1px rgba(0,0,0,0.5);
   cursor: pointer;
+  margin: 10px;
 }
 
 #level-selector .btn.selected {
   color: rgba(107,224,254,0.8);
+  color: rgba(255,0,0,0.8);
   text-shadow: 1px 0 5px rgba(0,0,0,0.5);
 }
 
