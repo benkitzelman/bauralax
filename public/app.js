@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-05-26
+/*! bauralux - v1.0.0 - 2016-06-05
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -19631,7 +19631,8 @@ Quintus.UI = function(Q) {
     LevelSelector.prototype.onPlaySelected = function() {
       HtmlComponent.hideFadeable(this.playBtn);
       this.hide();
-      return Q.unpauseGame();
+      Q.unpauseGame();
+      return Hud.instance().show();
     };
 
     return LevelSelector;
@@ -20015,7 +20016,6 @@ Quintus.UI = function(Q) {
       onLoaded = (function(_this) {
         return function() {
           _this.Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json");
-          _this.configureAnimations();
           _this.mainMenu();
           return Game.started.resolveWith(_this);
         };
@@ -20031,15 +20031,6 @@ Quintus.UI = function(Q) {
       progress.whenAssetsLoad.done(showGameCanvas);
       return this.Q.load(allAssets, onLoaded, {
         progressCallback: progress.update
-      });
-    };
-
-    Game.prototype.configureAnimations = function() {
-      return this.Q.animations('planet0', {
-        rotate: {
-          frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-          rate: 1 / 15
-        }
       });
     };
 
@@ -21574,30 +21565,50 @@ Quintus.UI = function(Q) {
       })(this);
     }
 
+    Stage.prototype.planetsBounds = function(padding) {
+      var bounds;
+      if (padding == null) {
+        padding = 0;
+      }
+      bounds = {
+        min: {
+          x: _.reduce(this.planets, (function(min, p) {
+            return min = _.min([p.x, min]);
+          }), this.planets[0].x),
+          y: _.reduce(this.planets, (function(min, p) {
+            return min = _.min([p.y, min]);
+          }), this.planets[0].y)
+        },
+        max: {
+          x: _.reduce(this.planets, (function(max, p) {
+            return max = _.max([p.x, max]);
+          }), this.planets[0].x),
+          y: _.reduce(this.planets, (function(max, p) {
+            return max = _.max([p.y, max]);
+          }), this.planets[0].y)
+        }
+      };
+      return _.extend({}, bounds, {
+        width: bounds.max.x - bounds.min.x + padding * 2,
+        height: bounds.max.y - bounds.min.y + padding * 2
+      });
+    };
+
     Stage.prototype.autoScale = function() {
-      var max, min, padding, playableHeight, playableWidth, scaleHeight, scaleWidth;
-      padding = 75;
-      min = {
-        x: _.reduce(this.planets, (function(min, p) {
-          return min = _.min([p.x, min]);
-        }), this.planets[0].x),
-        y: _.reduce(this.planets, (function(min, p) {
-          return min = _.min([p.y, min]);
-        }), this.planets[0].y)
-      };
-      max = {
-        x: _.reduce(this.planets, (function(max, p) {
-          return max = _.max([p.x, max]);
-        }), this.planets[0].x),
-        y: _.reduce(this.planets, (function(max, p) {
-          return max = _.max([p.y, max]);
-        }), this.planets[0].y)
-      };
-      playableWidth = max.x - min.x + padding * 2;
-      playableHeight = max.y - min.y + padding * 2;
-      scaleWidth = _.min([1, Q.cssWidth / playableWidth]);
-      scaleHeight = _.min([1, Q.cssHeight / playableHeight]);
+      var height, ref, scaleHeight, scaleWidth, width;
+      ref = this.planetsBounds(150), width = ref.width, height = ref.height;
+      scaleWidth = _.min([1, Q.cssWidth / width]);
+      scaleHeight = _.min([1, Q.cssHeight / height]);
       return _.min([scaleWidth, scaleHeight]);
+    };
+
+    Stage.prototype.autoCenter = function() {
+      var height, min, ref, width;
+      ref = this.planetsBounds(), min = ref.min, width = ref.width, height = ref.height;
+      return {
+        x: min.x + (width / 2),
+        y: min.y + (height / 2)
+      };
     };
 
     Stage.prototype.setupStage = function() {
@@ -21608,9 +21619,14 @@ Quintus.UI = function(Q) {
       Q.hammerTouchInput.on("press", this.onPress);
       Q.hammerTouchInput.on('zoom-out', this.onZoomOut);
       Q.hammerTouchInput.on('zoom-in', this.onZoomIn);
-      ref1 = ((ref = this.viewport) != null ? ref.coords : void 0) || Q.center(), x = ref1.x, y = ref1.y;
+      ref = this.autoCenter(), x = ref.x, y = ref.y;
+      this.QStage.viewport.scale = this.autoScale();
       this.QStage.viewport.centerOn(x, y);
-      this.QStage.viewport.scale = ((ref2 = this.viewport) != null ? ref2.scale : void 0) || this.autoScale();
+      this.viewportTarget = {
+        scale: ((ref1 = this.viewport) != null ? ref1.scale : void 0) || this.autoScale(),
+        coords: ((ref2 = this.viewport) != null ? ref2.coords : void 0) || this.autoCenter()
+      };
+      console.log('Start:', x, y, 'zoom to:', this.viewportTarget.coords);
       return Hud.instance().show();
     };
 
@@ -21686,24 +21702,6 @@ Quintus.UI = function(Q) {
       })(this));
     };
 
-    Stage.prototype.stepViewportTo = function(arg) {
-      var coords, maxStepDistance, stepDistance, targetAngle, tripDistance, vX, vY, x, xDistance, y, yDistance;
-      x = arg.x, y = arg.y;
-      vX = this.QStage.viewport.x;
-      vY = this.QStage.viewport.y;
-      maxStepDistance = 20;
-      targetAngle = Q.angle(vX, vY, x, y);
-      tripDistance = Q.distance(vX, vY, x, y);
-      stepDistance = _.min([tripDistance, maxStepDistance]);
-      xDistance = Q.offsetX(targetAngle, stepDistance);
-      yDistance = Q.offsetY(targetAngle, stepDistance);
-      coords = {
-        x: (xDistance * Q.axis(targetAngle).x) + x,
-        y: (yDistance * Q.axis(targetAngle).y) + y
-      };
-      return this.QStage.viewport.centerOn(coords.x, coords.y);
-    };
-
     Stage.prototype.onStep = function(dt) {
       var ref, stepCoords, stepScale;
       stepCoords = (function(_this) {
@@ -21713,18 +21711,19 @@ Quintus.UI = function(Q) {
           if (!((x != null) && (y != null))) {
             return;
           }
-          vX = _this.QStage.viewport.x;
-          vY = _this.QStage.viewport.y;
-          maxStepDistance = 10;
+          vX = _this.QStage.viewport.x + (Q.width / 2 / _this.QStage.viewport.scale);
+          vY = _this.QStage.viewport.y + (Q.height / 2 / _this.QStage.viewport.scale);
+          maxStepDistance = 5;
           targetAngle = Q.angle(vX, vY, x, y);
           tripDistance = Q.distance(vX, vY, x, y);
           stepDistance = _.min([dt, tripDistance, maxStepDistance]);
           xDistance = Q.offsetX(targetAngle, stepDistance);
           yDistance = Q.offsetY(targetAngle, stepDistance);
           coords = {
-            x: (xDistance * Q.axis(targetAngle).x) + x,
-            y: (yDistance * Q.axis(targetAngle).y) + y
+            x: (xDistance * Q.axis(targetAngle).x) + vX,
+            y: (yDistance * Q.axis(targetAngle).y) + vY
           };
+          console.log('stepping from:', vX, vY, 'to:', coords, targetAngle, Q.axis(Q.normalizeAngle(targetAngle)));
           return _this.QStage.viewport.centerOn(coords.x, coords.y);
         };
       })(this);
@@ -21737,7 +21736,7 @@ Quintus.UI = function(Q) {
           if (scale === _this.QStage.viewport.scale) {
             return;
           }
-          maxSpeed = 0.1;
+          maxSpeed = 0.02;
           remainingScale = Math.abs(_this.QStage.viewport.scale - scale);
           scaleStep = _.min([dt, remainingScale, maxSpeed]);
           if (_this.QStage.viewport.scale > scale) {
@@ -21899,36 +21898,36 @@ Quintus.UI = function(Q) {
 
     StageTwo.prototype.viewport = {
       coords: {
-        x: 400,
-        y: 325
+        x: 1200,
+        y: 350
       },
-      scale: 1
+      scale: 1.25
     };
 
     StageTwo.prototype.planets = [
       {
-        x: 200,
+        x: 700,
         y: 100,
         startingShipCount: 50,
         team: Team.RED
       }, {
-        x: 100,
+        x: 600,
         y: 550,
         startingShipCount: 50,
         team: Team.BLUE
       }, {
-        x: 700,
+        x: 1200,
         y: 350,
         startingShipCount: 50,
         team: Team.GREEN
       }, {
-        x: 400,
+        x: 900,
         y: 200
       }, {
-        x: 300,
+        x: 800,
         y: 400
       }, {
-        x: 600,
+        x: 1100,
         y: 500
       }
     ];
@@ -21958,7 +21957,7 @@ Quintus.UI = function(Q) {
         x: 600,
         y: 400
       },
-      scale: 1
+      scale: 1.5
     };
 
     StageThree.prototype.planets = [

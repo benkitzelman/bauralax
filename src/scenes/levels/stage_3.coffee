@@ -1,7 +1,7 @@
 class StageThree extends Stage
   viewport:
     coords : { x: 600, y: 400 }
-    scale  : 1
+    scale  : 1.5
 
   planets: [
     # middle axis

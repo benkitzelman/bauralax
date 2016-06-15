@@ -36,3 +36,4 @@ class LevelSelector extends HtmlComponent
     HtmlComponent.hideFadeable @playBtn
     @hide()
     Q.unpauseGame()
+    Hud.instance().show()

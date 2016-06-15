@@ -94,7 +94,6 @@ class Game
   loadAssets: ->
     onLoaded = =>
       @Q.compileSheets("planet_sheet_0.png", "planet_sheet_0.json")
-      @configureAnimations()
       @mainMenu()
       Game.started.resolveWith this
 
@@ -109,12 +108,6 @@ class Game
     progress.whenAssetsLoad.done showGameCanvas
 
     @Q.load allAssets, onLoaded, progressCallback: progress.update
-
-  configureAnimations: ->
-    @Q.animations 'planet0',
-      rotate:
-        frames: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
-        rate: 1/15
 
   viewport: ->
     @currentStage()?.QStage.viewport

@@ -8,22 +8,31 @@ class Stage extends Scene
     @addPlanets()
     window.setVP = (@viewportTarget) =>
 
+  planetsBounds: (padding = 0)->
+    bounds = 
+      min:
+        x: _.reduce( @planets, ((min, p) -> min = _.min [ p.x, min ]), @planets[0].x )
+        y: _.reduce( @planets, ((min, p) -> min = _.min [ p.y, min ]), @planets[0].y )
+
+      max:
+        x: _.reduce( @planets, ((max, p) -> max = _.max [ p.x, max ]), @planets[0].x )
+        y: _.reduce( @planets, ((max, p) -> max = _.max [ p.y, max ]), @planets[0].y )
+
+    _.extend {}, bounds,
+      width:  bounds.max.x - bounds.min.x + padding * 2
+      height: bounds.max.y - bounds.min.y + padding * 2
+
   autoScale: ->
-    padding = 75
-    min =
-      x: _.reduce( @planets, ((min, p) -> min = _.min [ p.x, min ]), @planets[0].x )
-      y: _.reduce( @planets, ((min, p) -> min = _.min [ p.y, min ]), @planets[0].y )
-
-    max =
-      x: _.reduce( @planets, ((max, p) -> max = _.max [ p.x, max ]), @planets[0].x )
-      y: _.reduce( @planets, ((max, p) -> max = _.max [ p.y, max ]), @planets[0].y )
-
-    playableWidth  = max.x - min.x + padding * 2
-    playableHeight = max.y - min.y + padding * 2
-    scaleWidth     = _.min [ 1, Q.cssWidth / playableWidth ]
-    scaleHeight    = _.min [ 1, Q.cssHeight / playableHeight ]
+    { width, height } = @planetsBounds 150
+    scaleWidth     = _.min [ 1, Q.cssWidth / width ]
+    scaleHeight    = _.min [ 1, Q.cssHeight / height ]
 
     _.min [ scaleWidth, scaleHeight ]
+
+  autoCenter: ->
+    { min, width, height } = @planetsBounds()
+    x: min.x + (width / 2)
+    y: min.y + (height / 2)
 
   setupStage: ->
     @QStage.add "viewport"
@@ -33,9 +42,17 @@ class Stage extends Scene
     Q.hammerTouchInput.on 'zoom-out', @onZoomOut
     Q.hammerTouchInput.on 'zoom-in', @onZoomIn
 
-    { x, y } = @viewport?.coords or Q.center()
+    # starting coords
+    { x, y } = @autoCenter()
+    @QStage.viewport.scale = @autoScale()
     @QStage.viewport.centerOn x, y
-    @QStage.viewport.scale = @viewport?.scale or @autoScale()
+
+    # zoom to
+    @viewportTarget = 
+      scale: @viewport?.scale or @autoScale()
+      coords: @viewport?.coords or @autoCenter()
+
+    console.log 'Start:', x, y, 'zoom to:', @viewportTarget.coords
     Hud.instance().show()
     # @QStage.collide = (obj, options) ->
     #   debugger
@@ -75,33 +92,15 @@ class Stage extends Scene
         Stage.load()
       ), 1000
 
-  stepViewportTo: ({x, y}) ->
-    vX = @QStage.viewport.x
-    vY = @QStage.viewport.y
-
-    maxStepDistance = 20
-    targetAngle     = Q.angle vX, vY, x, y
-    tripDistance    = Q.distance vX, vY, x, y
-    stepDistance    = _.min [ tripDistance, maxStepDistance ] # step hypotenuse
-
-    xDistance       = Q.offsetX targetAngle, stepDistance
-    yDistance       = Q.offsetY targetAngle, stepDistance
-
-    coords =
-      x: ( xDistance * Q.axis( targetAngle ).x ) + x
-      y: ( yDistance * Q.axis( targetAngle ).y ) + y
-
-    @QStage.viewport.centerOn coords.x, coords.y
-
   onStep: (dt) ->
     stepCoords = =>
       { x, y } = @viewportTarget?.coords or {}
       return unless x? and y?
 
-      vX = @QStage.viewport.x
-      vY = @QStage.viewport.y
+      vX = @QStage.viewport.x + ( Q.width / 2 / @QStage.viewport.scale )
+      vY = @QStage.viewport.y + ( Q.height / 2 / @QStage.viewport.scale )
 
-      maxStepDistance = 10
+      maxStepDistance = 5
       targetAngle     = Q.angle vX, vY, x, y
       tripDistance    = Q.distance vX, vY, x, y
       stepDistance    = _.min [ dt, tripDistance, maxStepDistance ] # step hypotenuse
@@ -110,18 +109,17 @@ class Stage extends Scene
       yDistance       = Q.offsetY targetAngle, stepDistance
 
       coords =
-        x: ( xDistance * Q.axis( targetAngle ).x ) + x
-        y: ( yDistance * Q.axis( targetAngle ).y ) + y
+        x: ( xDistance * Q.axis( targetAngle ).x ) + vX
+        y: ( yDistance * Q.axis( targetAngle ).y ) + vY
 
-      # @QStage.viewport.x = coords.x
-      # @QStage.viewport.y = coords.y
+      console.log 'stepping from:', vX, vY, 'to:', coords, targetAngle, Q.axis( Q.normalizeAngle targetAngle )
       @QStage.viewport.centerOn coords.x, coords.y
 
     stepScale = =>
       return unless scale = @viewportTarget?.scale
       return if scale is @QStage.viewport.scale
 
-      maxSpeed       = 0.1
+      maxSpeed       = 0.02
       remainingScale = Math.abs( @QStage.viewport.scale - scale )
       scaleStep      = _.min [ dt, remainingScale, maxSpeed ]
 
