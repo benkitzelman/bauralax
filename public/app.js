@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-06-05
+/*! bauralux - v1.0.0 - 2016-06-15
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -20818,7 +20818,7 @@ Quintus.UI = function(Q) {
         texture: texture,
         textureWidth: 550,
         frameX: -Q.random(50, Q.asset(texture).width),
-        spinSpeed: Q.random(1, 5) / 30,
+        spinSpeed: Q.random(2, 5) / 15,
         spinDirection: [1, -1][Q.random(0, 1)],
         scale: scale,
         team: Team.NONE,
@@ -20829,6 +20829,7 @@ Quintus.UI = function(Q) {
         canChangeTeams: true,
         angle: Q.random(-45, 45)
       }, p));
+      this.p.scaledTexture = this.scaledTexture();
       this.add('teamResource');
       this.add('shipBuilder');
       this.add('absorber');
@@ -20892,11 +20893,21 @@ Quintus.UI = function(Q) {
       ctx.fill();
       return ctx.restore();
     },
-    drawImage: function(ctx) {
-      var diameter, drawImageClip, drawShadows, drawTexture, texture, textureEdgeX;
+    scaledTexture: function() {
+      var diameter, ratio, texture;
       texture = Q.asset(this.p.texture);
-      textureEdgeX = -texture.width + this.radius();
       diameter = this.radius() * 2;
+      ratio = diameter / texture.height;
+      return {
+        ratio: ratio,
+        height: texture.height * ratio,
+        width: texture.width * ratio
+      };
+    },
+    drawImage: function(ctx) {
+      var drawImageClip, drawShadows, drawTexture, texture, textureEdgeX;
+      texture = Q.asset(this.p.texture);
+      textureEdgeX = -this.p.scaledTexture.width + this.radius();
       drawImageClip = (function(_this) {
         return function() {
           ctx.beginPath();
@@ -20930,10 +20941,10 @@ Quintus.UI = function(Q) {
           var joinX;
           ctx.globalCompositeOperation = 'source-over';
           ctx.globalAlpha = 1;
-          ctx.drawImage(texture, _this.p.frameX, -texture.height / 2);
-          if (_this.p.frameX <= textureEdgeX + diameter) {
-            joinX = _this.p.frameX + texture.width - 1;
-            return ctx.drawImage(texture, joinX, -texture.height / 2);
+          ctx.drawImage(texture, Math.floor(_this.p.frameX), Math.floor(-_this.p.scaledTexture.height / 2), _this.p.scaledTexture.width, _this.p.scaledTexture.height);
+          if (_this.p.frameX <= textureEdgeX + (_this.radius() * 2)) {
+            joinX = _this.p.frameX + _this.p.scaledTexture.width - 1;
+            return ctx.drawImage(texture, Math.floor(joinX), Math.floor(-_this.p.scaledTexture.height / 2), _this.p.scaledTexture.width, _this.p.scaledTexture.height);
           }
         };
       })(this);
@@ -20947,7 +20958,7 @@ Quintus.UI = function(Q) {
       var hasScrolledToEndOfImage;
       hasScrolledToEndOfImage = (function(_this) {
         return function() {
-          return _this.p.frameX <= -(Q.asset(_this.p.texture).width + _this.radius());
+          return _this.p.frameX <= -(_this.p.scaledTexture.width + _this.radius());
         };
       })(this);
       if (!this.p.frameX || hasScrolledToEndOfImage()) {

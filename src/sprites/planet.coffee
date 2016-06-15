@@ -9,7 +9,7 @@ Q.Sprite.extend "Planet",
       texture          : texture
       textureWidth     : 550
       frameX           : -Q.random( 50, Q.asset( texture ).width )
-      spinSpeed        : Q.random(1, 5) / 30
+      spinSpeed        : Q.random(2, 5) / 15
       spinDirection    : [ 1, -1 ][ Q.random 0, 1 ]
       scale            : scale
       team             : Team.NONE
@@ -20,6 +20,8 @@ Q.Sprite.extend "Planet",
       canChangeTeams   : true
       angle            : Q.random(-45, 45)
     , p
+
+    @p.scaledTexture = @scaledTexture()
 
     @add 'teamResource'
     @add 'shipBuilder'
@@ -87,10 +89,17 @@ Q.Sprite.extend "Planet",
 
     ctx.restore()
 
+  scaledTexture: ->
+    texture      = Q.asset @p.texture
+    diameter     = @radius() * 2
+    ratio        = diameter / texture.height
+    ratio  : ratio
+    height : texture.height * ratio
+    width  : texture.width * ratio
+
   drawImage: (ctx) ->
     texture      = Q.asset @p.texture
-    textureEdgeX = -texture.width + @radius()
-    diameter     = @radius() * 2
+    textureEdgeX = -@p.scaledTexture.width + @radius()
 
     # create the mask for the image scroller
     drawImageClip = =>
@@ -126,11 +135,21 @@ Q.Sprite.extend "Planet",
     drawTexture = =>
       ctx.globalCompositeOperation = 'source-over'
       ctx.globalAlpha = 1
-      ctx.drawImage texture, @p.frameX, -texture.height / 2
 
-      if @p.frameX <= textureEdgeX + diameter
-        joinX = @p.frameX + texture.width - 1
-        ctx.drawImage texture, joinX, -texture.height / 2
+      ctx.drawImage(
+        texture,
+        Math.floor(@p.frameX), Math.floor(-@p.scaledTexture.height / 2),
+        @p.scaledTexture.width, @p.scaledTexture.height
+      )
+
+      if @p.frameX <= textureEdgeX + ( @radius() * 2 )
+        joinX = @p.frameX + @p.scaledTexture.width - 1
+
+        ctx.drawImage(
+          texture,
+          Math.floor(joinX), Math.floor(-@p.scaledTexture.height / 2),
+          @p.scaledTexture.width, @p.scaledTexture.height
+        )
     #--
 
     ctx.save()
@@ -143,7 +162,7 @@ Q.Sprite.extend "Planet",
 
   step: (dt) ->
     hasScrolledToEndOfImage = =>
-      @p.frameX <= -( Q.asset( @p.texture ).width + @radius() )
+      @p.frameX <= -( @p.scaledTexture.width + @radius() )
 
     @p.frameX  = -@radius() if !@p.frameX or hasScrolledToEndOfImage()
     @p.frameX -= @p.spinSpeed or 1
