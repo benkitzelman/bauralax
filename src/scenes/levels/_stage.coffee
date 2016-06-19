@@ -9,7 +9,7 @@ class Stage extends Scene
     window.setVP = (@viewportTarget) =>
 
   planetsBounds: (padding = 0)->
-    bounds = 
+    bounds =
       min:
         x: _.reduce( @planets, ((min, p) -> min = _.min [ p.x, min ]), @planets[0].x )
         y: _.reduce( @planets, ((min, p) -> min = _.min [ p.y, min ]), @planets[0].y )
@@ -48,15 +48,22 @@ class Stage extends Scene
     @QStage.viewport.centerOn x, y
 
     # zoom to
-    @viewportTarget = 
+    viewport =
       scale: @viewport?.scale or @autoScale()
       coords: @viewport?.coords or @autoCenter()
 
+    @zoomTo( viewport )
     console.log 'Start:', x, y, 'zoom to:', @viewportTarget.coords
     Hud.instance().show()
     # @QStage.collide = (obj, options) ->
     #   debugger
       #apply the collision mask so friendly ships dont collide
+
+  zoomTo: (@viewportTarget) ->
+    @autoZoom = true
+    @on 'viewport-target-reached', @, =>
+      @autoZoom = false
+      console.log 'zoomed'
 
   addBackground: =>
     @QStage.insert(new Q.Background)
@@ -93,43 +100,60 @@ class Stage extends Scene
       ), 1000
 
   onStep: (dt) ->
+    maxStepDistance = 10
+    tripDistance = stepDistance = 0
+
     stepCoords = =>
       { x, y } = @viewportTarget?.coords or {}
       return unless x? and y?
 
-      vX = @QStage.viewport.x + ( Q.width / 2 / @QStage.viewport.scale )
-      vY = @QStage.viewport.y + ( Q.height / 2 / @QStage.viewport.scale )
+      vCX = @QStage.viewport.x + ( Q.width / 2 / @QStage.viewport.scale )
+      vCY = @QStage.viewport.y + ( Q.height / 2 / @QStage.viewport.scale )
 
-      maxStepDistance = 5
-      targetAngle     = Q.angle vX, vY, x, y
-      tripDistance    = Q.distance vX, vY, x, y
-      stepDistance    = _.min [ dt, tripDistance, maxStepDistance ] # step hypotenuse
+      targetAngle     = Q.angle vCX, vCY, x, y
+      tripDistance    = Q.distance vCX, vCY, x, y
+      stepDistance    = _.min [ dt * 500, tripDistance, maxStepDistance ] # step hypotenuse
 
       xDistance       = Q.offsetX targetAngle, stepDistance
       yDistance       = Q.offsetY targetAngle, stepDistance
 
-      coords =
-        x: ( xDistance * Q.axis( targetAngle ).x ) + vX
-        y: ( yDistance * Q.axis( targetAngle ).y ) + vY
+      center =
+        x: vCX + ( xDistance * Q.axis( targetAngle ).x )
+        y: vCY + ( yDistance * Q.axis( targetAngle ).y )
 
-      console.log 'stepping from:', vX, vY, 'to:', coords, targetAngle, Q.axis( Q.normalizeAngle targetAngle )
-      @QStage.viewport.centerOn coords.x, coords.y
+      @QStage.viewport.centerOn center.x, center.y
 
     stepScale = =>
       return unless scale = @viewportTarget?.scale
       return if scale is @QStage.viewport.scale
 
-      maxSpeed       = 0.02
+      maxSpeed       = 0.05
       remainingScale = Math.abs( @QStage.viewport.scale - scale )
-      scaleStep      = _.min [ dt, remainingScale, maxSpeed ]
+      scaleStep      = if @autoZoom
+        calculatedSpeed = tripDistance / stepDistance * remainingScale
+
+        _.min [ calculatedSpeed, remainingScale ]
+      else
+        _.min [ dt, remainingScale, maxSpeed ]
 
       scaleStep *= -1 if @QStage.viewport.scale > scale
       @QStage.viewport.scale += scaleStep
+
+    atTarget = =>
+      { x, y, scale } = @QStage.viewport
+      vCX = x + ( Q.width / 2 / @QStage.viewport.scale )
+      vCY = y + ( Q.height / 2 / @QStage.viewport.scale )
+
+      @viewportTarget?.scale is scale and @viewportTarget?.coords?.x is vCX and @viewportTarget?.coords?.y is vCY
+
     #--
 
-    stepScale()
     stepCoords()
-    delete @viewportTarget if @viewportTarget?.scale is @QStage.viewport.scale
+    stepScale()
+    return unless atTarget()
+
+    @trigger 'viewport-target-reached', @viewportTarget
+    delete @viewportTarget
 
   zoomIncrementFor: (velocity) ->
     _.max [ 0.15, Math.abs( velocity ) ]

@@ -1,4 +1,4 @@
-class Scene
+class Scene extends Q.Evented
   @register: (cb) ->
     return if @instance
     Q.scene @name, (qStage) =>

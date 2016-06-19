@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-06-15
+/*! bauralux - v1.0.0 - 2016-06-17
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -21519,8 +21519,12 @@ Quintus.UI = function(Q) {
     }
   });
 
-  Scene = (function() {
-    function Scene() {}
+  Scene = (function(superClass) {
+    extend(Scene, superClass);
+
+    function Scene() {
+      return Scene.__super__.constructor.apply(this, arguments);
+    }
 
     Scene.register = function(cb) {
       if (this.instance) {
@@ -21549,7 +21553,7 @@ Quintus.UI = function(Q) {
 
     return Scene;
 
-  })();
+  })(Q.Evented);
 
   Stage = (function(superClass) {
     extend(Stage, superClass);
@@ -21623,7 +21627,7 @@ Quintus.UI = function(Q) {
     };
 
     Stage.prototype.setupStage = function() {
-      var ref, ref1, ref2, x, y;
+      var ref, ref1, ref2, viewport, x, y;
       this.QStage.add("viewport");
       this.QStage.add("selectionControls");
       this.QStage.on("step", this, 'onStep');
@@ -21633,12 +21637,24 @@ Quintus.UI = function(Q) {
       ref = this.autoCenter(), x = ref.x, y = ref.y;
       this.QStage.viewport.scale = this.autoScale();
       this.QStage.viewport.centerOn(x, y);
-      this.viewportTarget = {
+      viewport = {
         scale: ((ref1 = this.viewport) != null ? ref1.scale : void 0) || this.autoScale(),
         coords: ((ref2 = this.viewport) != null ? ref2.coords : void 0) || this.autoCenter()
       };
+      this.zoomTo(viewport);
       console.log('Start:', x, y, 'zoom to:', this.viewportTarget.coords);
       return Hud.instance().show();
+    };
+
+    Stage.prototype.zoomTo = function(viewportTarget) {
+      this.viewportTarget = viewportTarget;
+      this.autoZoom = true;
+      return this.on('viewport-target-reached', this, (function(_this) {
+        return function() {
+          _this.autoZoom = false;
+          return console.log('zoomed');
+        };
+      })(this));
     };
 
     Stage.prototype.addBackground = function() {
@@ -21714,53 +21730,64 @@ Quintus.UI = function(Q) {
     };
 
     Stage.prototype.onStep = function(dt) {
-      var ref, stepCoords, stepScale;
+      var atTarget, maxStepDistance, stepCoords, stepDistance, stepScale, tripDistance;
+      maxStepDistance = 10;
+      tripDistance = stepDistance = 0;
       stepCoords = (function(_this) {
         return function() {
-          var coords, maxStepDistance, ref, ref1, stepDistance, targetAngle, tripDistance, vX, vY, x, xDistance, y, yDistance;
+          var center, ref, ref1, targetAngle, vCX, vCY, x, xDistance, y, yDistance;
           ref1 = ((ref = _this.viewportTarget) != null ? ref.coords : void 0) || {}, x = ref1.x, y = ref1.y;
           if (!((x != null) && (y != null))) {
             return;
           }
-          vX = _this.QStage.viewport.x + (Q.width / 2 / _this.QStage.viewport.scale);
-          vY = _this.QStage.viewport.y + (Q.height / 2 / _this.QStage.viewport.scale);
-          maxStepDistance = 5;
-          targetAngle = Q.angle(vX, vY, x, y);
-          tripDistance = Q.distance(vX, vY, x, y);
-          stepDistance = _.min([dt, tripDistance, maxStepDistance]);
+          vCX = _this.QStage.viewport.x + (Q.width / 2 / _this.QStage.viewport.scale);
+          vCY = _this.QStage.viewport.y + (Q.height / 2 / _this.QStage.viewport.scale);
+          targetAngle = Q.angle(vCX, vCY, x, y);
+          tripDistance = Q.distance(vCX, vCY, x, y);
+          stepDistance = _.min([dt * 500, tripDistance, maxStepDistance]);
           xDistance = Q.offsetX(targetAngle, stepDistance);
           yDistance = Q.offsetY(targetAngle, stepDistance);
-          coords = {
-            x: (xDistance * Q.axis(targetAngle).x) + vX,
-            y: (yDistance * Q.axis(targetAngle).y) + vY
+          center = {
+            x: vCX + (xDistance * Q.axis(targetAngle).x),
+            y: vCY + (yDistance * Q.axis(targetAngle).y)
           };
-          console.log('stepping from:', vX, vY, 'to:', coords, targetAngle, Q.axis(Q.normalizeAngle(targetAngle)));
-          return _this.QStage.viewport.centerOn(coords.x, coords.y);
+          return _this.QStage.viewport.centerOn(center.x, center.y);
         };
       })(this);
       stepScale = (function(_this) {
         return function() {
-          var maxSpeed, ref, remainingScale, scale, scaleStep;
+          var calculatedSpeed, maxSpeed, ref, remainingScale, scale, scaleStep;
           if (!(scale = (ref = _this.viewportTarget) != null ? ref.scale : void 0)) {
             return;
           }
           if (scale === _this.QStage.viewport.scale) {
             return;
           }
-          maxSpeed = 0.02;
+          maxSpeed = 0.05;
           remainingScale = Math.abs(_this.QStage.viewport.scale - scale);
-          scaleStep = _.min([dt, remainingScale, maxSpeed]);
+          scaleStep = _this.autoZoom ? (calculatedSpeed = tripDistance / stepDistance * remainingScale, _.min([calculatedSpeed, remainingScale])) : _.min([dt, remainingScale, maxSpeed]);
           if (_this.QStage.viewport.scale > scale) {
             scaleStep *= -1;
           }
           return _this.QStage.viewport.scale += scaleStep;
         };
       })(this);
-      stepScale();
+      atTarget = (function(_this) {
+        return function() {
+          var ref, ref1, ref2, ref3, ref4, ref5, scale, vCX, vCY, x, y;
+          ref = _this.QStage.viewport, x = ref.x, y = ref.y, scale = ref.scale;
+          vCX = x + (Q.width / 2 / _this.QStage.viewport.scale);
+          vCY = y + (Q.height / 2 / _this.QStage.viewport.scale);
+          return ((ref1 = _this.viewportTarget) != null ? ref1.scale : void 0) === scale && ((ref2 = _this.viewportTarget) != null ? (ref3 = ref2.coords) != null ? ref3.x : void 0 : void 0) === vCX && ((ref4 = _this.viewportTarget) != null ? (ref5 = ref4.coords) != null ? ref5.y : void 0 : void 0) === vCY;
+        };
+      })(this);
       stepCoords();
-      if (((ref = this.viewportTarget) != null ? ref.scale : void 0) === this.QStage.viewport.scale) {
-        return delete this.viewportTarget;
+      stepScale();
+      if (!atTarget()) {
+        return;
       }
+      this.trigger('viewport-target-reached', this.viewportTarget);
+      return delete this.viewportTarget;
     };
 
     Stage.prototype.zoomIncrementFor = function(velocity) {
