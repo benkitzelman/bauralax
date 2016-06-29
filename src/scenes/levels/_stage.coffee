@@ -48,12 +48,10 @@ class Stage extends Scene
     @QStage.viewport.centerOn x, y
 
     # zoom to
-    viewport =
-      scale: @viewport?.scale or @autoScale()
-      coords: @viewport?.coords or @autoCenter()
+    @zoomTo
+      scale  : @viewport?.scale or @autoScale()
+      coords : @viewport?.coords or @autoCenter()
 
-    @zoomTo( viewport )
-    console.log 'Start:', x, y, 'zoom to:', @viewportTarget.coords
     Hud.instance().show()
     # @QStage.collide = (obj, options) ->
     #   debugger
@@ -100,9 +98,6 @@ class Stage extends Scene
       ), 1000
 
   onStep: (dt) ->
-    maxStepDistance = 10
-    tripDistance = stepDistance = 0
-
     stepCoords = =>
       { x, y } = @viewportTarget?.coords or {}
       return unless x? and y?
@@ -110,6 +105,7 @@ class Stage extends Scene
       vCX = @QStage.viewport.x + ( Q.width / 2 / @QStage.viewport.scale )
       vCY = @QStage.viewport.y + ( Q.height / 2 / @QStage.viewport.scale )
 
+      maxStepDistance = 10
       targetAngle     = Q.angle vCX, vCY, x, y
       tripDistance    = Q.distance vCX, vCY, x, y
       stepDistance    = _.min [ dt * 500, tripDistance, maxStepDistance ] # step hypotenuse
@@ -129,12 +125,7 @@ class Stage extends Scene
 
       maxSpeed       = 0.05
       remainingScale = Math.abs( @QStage.viewport.scale - scale )
-      scaleStep      = if @autoZoom
-        calculatedSpeed = tripDistance / stepDistance * remainingScale
-
-        _.min [ calculatedSpeed, remainingScale ]
-      else
-        _.min [ dt, remainingScale, maxSpeed ]
+      scaleStep      =  _.min [ dt, remainingScale, maxSpeed ]
 
       scaleStep *= -1 if @QStage.viewport.scale > scale
       @QStage.viewport.scale += scaleStep

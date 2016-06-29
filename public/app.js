@@ -1,4 +1,4 @@
-/*! bauralux - v1.0.0 - 2016-06-17
+/*! bauralux - v1.0.0 - 2016-06-19
 * Copyright (c) 2016  *//*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -21627,7 +21627,7 @@ Quintus.UI = function(Q) {
     };
 
     Stage.prototype.setupStage = function() {
-      var ref, ref1, ref2, viewport, x, y;
+      var ref, ref1, ref2, x, y;
       this.QStage.add("viewport");
       this.QStage.add("selectionControls");
       this.QStage.on("step", this, 'onStep');
@@ -21637,12 +21637,10 @@ Quintus.UI = function(Q) {
       ref = this.autoCenter(), x = ref.x, y = ref.y;
       this.QStage.viewport.scale = this.autoScale();
       this.QStage.viewport.centerOn(x, y);
-      viewport = {
+      this.zoomTo({
         scale: ((ref1 = this.viewport) != null ? ref1.scale : void 0) || this.autoScale(),
         coords: ((ref2 = this.viewport) != null ? ref2.coords : void 0) || this.autoCenter()
-      };
-      this.zoomTo(viewport);
-      console.log('Start:', x, y, 'zoom to:', this.viewportTarget.coords);
+      });
       return Hud.instance().show();
     };
 
@@ -21730,18 +21728,17 @@ Quintus.UI = function(Q) {
     };
 
     Stage.prototype.onStep = function(dt) {
-      var atTarget, maxStepDistance, stepCoords, stepDistance, stepScale, tripDistance;
-      maxStepDistance = 10;
-      tripDistance = stepDistance = 0;
+      var atTarget, stepCoords, stepScale;
       stepCoords = (function(_this) {
         return function() {
-          var center, ref, ref1, targetAngle, vCX, vCY, x, xDistance, y, yDistance;
+          var center, maxStepDistance, ref, ref1, stepDistance, targetAngle, tripDistance, vCX, vCY, x, xDistance, y, yDistance;
           ref1 = ((ref = _this.viewportTarget) != null ? ref.coords : void 0) || {}, x = ref1.x, y = ref1.y;
           if (!((x != null) && (y != null))) {
             return;
           }
           vCX = _this.QStage.viewport.x + (Q.width / 2 / _this.QStage.viewport.scale);
           vCY = _this.QStage.viewport.y + (Q.height / 2 / _this.QStage.viewport.scale);
+          maxStepDistance = 10;
           targetAngle = Q.angle(vCX, vCY, x, y);
           tripDistance = Q.distance(vCX, vCY, x, y);
           stepDistance = _.min([dt * 500, tripDistance, maxStepDistance]);
@@ -21756,7 +21753,7 @@ Quintus.UI = function(Q) {
       })(this);
       stepScale = (function(_this) {
         return function() {
-          var calculatedSpeed, maxSpeed, ref, remainingScale, scale, scaleStep;
+          var maxSpeed, ref, remainingScale, scale, scaleStep;
           if (!(scale = (ref = _this.viewportTarget) != null ? ref.scale : void 0)) {
             return;
           }
@@ -21765,7 +21762,7 @@ Quintus.UI = function(Q) {
           }
           maxSpeed = 0.05;
           remainingScale = Math.abs(_this.QStage.viewport.scale - scale);
-          scaleStep = _this.autoZoom ? (calculatedSpeed = tripDistance / stepDistance * remainingScale, _.min([calculatedSpeed, remainingScale])) : _.min([dt, remainingScale, maxSpeed]);
+          scaleStep = _.min([dt, remainingScale, maxSpeed]);
           if (_this.QStage.viewport.scale > scale) {
             scaleStep *= -1;
           }
